@@ -1510,6 +1510,8 @@ async function fetchLeaderboard() {
             };
         });
 
+        // Build upcoming from scores.json players without scores
+        const knownIds = new Set([...activePlayers.map(p=>p.id), ...upcomingPlayers.map(p=>p.id)]);
         lbUpcoming = upcomingPlayers.map(p => {
             const name  = p.full_name || p.display_name2 || '—';
             const champ = p.past ? ' <span style="color:var(--gold);font-size:9px">★</span>' : '';
@@ -1519,8 +1521,27 @@ async function fetchLeaderboard() {
                 nameHtml: name + champ,
                 country: p.countryName || '',
                 teeTime: teeTimeLookup[p.id] || p.teetime || '—',
+                timeRaw: parseTimeToMins(teeTimeLookup[p.id] || p.teetime || ''),
             };
         });
+        // Add remaining players from pairings that aren't in scores.json
+        for (const g of pairingsData) {
+            for (const pl of (g.player || [])) {
+                if (!pl.id || knownIds.has(pl.id)) continue;
+                knownIds.add(pl.id);
+                const name = `${pl.first_name||''} ${(pl.last_name||'').trim()}`.trim();
+                const champ = pl.past_champion ? ' <span style="color:var(--gold);font-size:9px">★</span>' : '';
+                lbUpcoming.push({
+                    id: pl.id, name,
+                    flag: flagEmoji(pl.country || ''),
+                    nameHtml: name + champ,
+                    country: pl.country || '',
+                    teeTime: g.time || '—',
+                    timeRaw: parseTimeToMins(g.time || ''),
+                });
+            }
+        }
+        lbUpcoming.sort((a,b) => (a.timeRaw||0) - (b.timeRaw||0));
 
         applyLbView();
         renderHoleDifficulty();
@@ -1586,6 +1607,7 @@ async function fetchLeaderboardESPN() {
             };
         });
 
+        const espnIds = new Set([...active.map(p=>String(p.athlete?.id)), ...scheduled.map(p=>String(p.athlete?.id))]);
         lbUpcoming = scheduled.map((p,i) => {
             const name = p.athlete?.displayName || '?';
             const teeTime = p.status?.teeTime ? new Date(p.status.teeTime).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}) : '—';
@@ -1594,8 +1616,26 @@ async function fetchLeaderboardESPN() {
                 flag: flagEmoji(p.athlete?.flag?.alt || p.athlete?.country || ''),
                 nameHtml: name, country: '',
                 teeTime,
+                timeRaw: parseTimeToMins(teeTime),
             };
         });
+        // Fill in remaining players from pairings
+        for (const g of pairingsData) {
+            for (const pl of (g.player || [])) {
+                if (!pl.id || espnIds.has(pl.id)) continue;
+                espnIds.add(pl.id);
+                const name = `${pl.first_name||''} ${(pl.last_name||'').trim()}`.trim();
+                const champ = pl.past_champion ? ' <span style="color:var(--gold);font-size:9px">★</span>' : '';
+                lbUpcoming.push({
+                    id: pl.id, name,
+                    flag: flagEmoji(pl.country || ''),
+                    nameHtml: name + champ, country: pl.country || '',
+                    teeTime: g.time || '—',
+                    timeRaw: parseTimeToMins(g.time || ''),
+                });
+            }
+        }
+        lbUpcoming.sort((a,b) => (a.timeRaw||0) - (b.timeRaw||0));
 
         // Update header with leader
         const leader = lbPlayers.find(p => p.posNum <= 9000);
