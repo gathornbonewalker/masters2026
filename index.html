@@ -200,6 +200,9 @@
         .lb-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; gap:10px; text-align:center; }
         .lb-empty-title { font-family:'Playfair Display',serif; font-size:16px; color:var(--gold); }
         .lb-empty-sub { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); letter-spacing:2px; }
+        .lb-upcoming-hdr { display:flex; align-items:center; gap:8px; padding:8px 10px 4px; margin-top:4px; border-top:1px solid var(--border); }
+        .lb-upcoming-hdr span { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); letter-spacing:2px; }
+        .lb-upcoming-hdr .dot { width:5px; height:5px; border-radius:50%; background:var(--text-muted); }
 
         /* ── CENTER: STREAM ──────────────────────────── */
         #center-col { overflow:hidden; }
@@ -758,6 +761,7 @@
             <span class="lb-ch l">Player</span><span class="lb-ch">TOT</span><span class="lb-ch">RND</span><span class="lb-ch">☆</span>
         </div>
         <div id="lb-rows"><div class="loading-msg">FETCHING DATA...</div></div>
+        <div id="lb-upcoming"></div>
     </div>
 
     <!-- ── CENTER: Stream + News ─────────────────────────── -->
@@ -1096,6 +1100,38 @@ function applyLbView() {
     renderLbColHdr();
     renderFavorites();
     renderScoreDistribution();
+    renderUpcoming();
+}
+
+let lbUpcoming = []; // players not yet on the course
+
+function renderUpcoming() {
+    const el = document.getElementById('lb-upcoming');
+    if (!el) return;
+    // Filter upcoming by search too
+    let players = [...lbUpcoming];
+    if (lbFilter) {
+        const q = lbFilter.toLowerCase();
+        players = players.filter(p => p.name.toLowerCase().includes(q));
+    }
+    if (!players.length) { el.innerHTML = ''; return; }
+    let html = `<div class="lb-upcoming-hdr"><div class="dot"></div><span>UPCOMING TEE TIMES</span></div>`;
+    players.forEach(p => {
+        const isFav = favorites.has(p.id);
+        const star = `<span class="lb-star${isFav?' fav':''}" data-pid="${p.id}" onclick="toggleFavorite('${p.id}',event)">${isFav?'★':'☆'}</span>`;
+        const click = p.id ? `onclick="showPlayerCard('${p.id}')"` : '';
+        html += `<div class="lb-row fade-in" ${click} style="cursor:pointer;opacity:0.7">
+            <span class="lb-pos" style="color:var(--text-muted)">—</span>
+            <span class="lb-flag">${p.flag}</span>
+            <div class="lb-info">
+                <div class="lb-name">${p.nameHtml}</div>
+                <div class="lb-thru" style="color:var(--text-muted)">${p.country || ''}</div>
+            </div>
+            <span class="lb-score even" style="font-size:9px;grid-column:span 2;text-align:left;padding-left:4px;color:var(--text-muted)">${p.teeTime || '—'}</span>
+            ${star}
+        </div>`;
+    });
+    el.innerHTML = html;
 }
 
 function fmtCountdown(ms) {
@@ -1442,8 +1478,19 @@ async function fetchLeaderboard() {
             document.getElementById('hdr-score').textContent  = fmtMastersScore(leader.topar);
         }
 
+        // Build tee time lookup from pairings
+        const teeTimeLookup = {};
+        for (const g of pairingsData) {
+            for (const pl of (g.player || [])) {
+                if (pl.id) teeTimeLookup[pl.id] = g.time;
+            }
+        }
+
+        const activePlayers = players.filter(p => p.topar != null && p.topar !== '');
+        const upcomingPlayers = players.filter(p => p.topar == null || p.topar === '');
+
         lbMode = 'live';
-        lbPlayers = players.map(p => {
+        lbPlayers = activePlayers.map(p => {
             const name    = p.full_name || p.display_name2 || '—';
             const champ   = p.past ? ' <span style="color:var(--gold);font-size:9px">★</span>' : '';
             const thruNum = p.thru ? parseInt(p.thru) : null;
@@ -1462,6 +1509,19 @@ async function fetchLeaderboard() {
                 time: '', timeRaw: 0, country: '',
             };
         });
+
+        lbUpcoming = upcomingPlayers.map(p => {
+            const name  = p.full_name || p.display_name2 || '—';
+            const champ = p.past ? ' <span style="color:var(--gold);font-size:9px">★</span>' : '';
+            return {
+                id: p.id, name,
+                flag: flagEmoji(p.countryCode || ''),
+                nameHtml: name + champ,
+                country: p.countryName || '',
+                teeTime: teeTimeLookup[p.id] || p.teetime || '—',
+            };
+        });
+
         applyLbView();
         renderHoleDifficulty();
 
@@ -1502,26 +1562,38 @@ async function fetchLeaderboardESPN() {
         document.getElementById('lb-round-tag').textContent = roundLabel;
 
         lbMode = 'espn';
-        lbPlayers = competitors.map((p,i) => {
+        const active = competitors.filter(p => p.status?.type?.name !== 'STATUS_SCHEDULED');
+        const scheduled = competitors.filter(p => p.status?.type?.name === 'STATUS_SCHEDULED');
+
+        lbPlayers = active.map((p,i) => {
             const name   = p.athlete?.displayName || '?';
             const espnId = String(p.athlete?.id || i);
             const posId  = parseInt(p.status?.position?.id) || 0;
             const thruNum = p.status?.thru || 0;
-            const scheduled = p.status?.type?.name === 'STATUS_SCHEDULED';
-            const teeTime = p.status?.teeTime ? new Date(p.status.teeTime).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}) : '';
             return {
                 id: espnId, name,
                 flag: flagEmoji(p.athlete?.flag?.alt || p.athlete?.country || ''),
                 pos: posId > 0 ? String(p.status?.position?.displayName || posId) : '—',
                 posNum: posId > 0 ? posId : 9000 + i,
-                tot: scheduled ? '—' : fmtScore(p.score), totRaw: scoreToNum(p.score), totCls: scoreCls(p.score),
-                today: scheduled ? (teeTime || '—') : fmtScore(p.linescores?.[round-1]?.displayValue),
+                tot: fmtScore(p.score), totRaw: scoreToNum(p.score), totCls: scoreCls(p.score),
+                today: fmtScore(p.linescores?.[round-1]?.displayValue),
                 todayRaw: scoreToNum(p.linescores?.[round-1]?.displayValue),
-                todayCls: scheduled ? '' : scoreCls(p.linescores?.[round-1]?.displayValue),
-                thru: scheduled ? '' : (thruNum > 0 ? `H${thruNum}` : ''),
-                thruLive: !scheduled && thruNum > 0 && thruNum < 18,
+                todayCls: scoreCls(p.linescores?.[round-1]?.displayValue),
+                thru: thruNum > 0 ? `H${thruNum}` : '',
+                thruLive: thruNum > 0 && thruNum < 18,
                 isCut: false, nameHtml: name,
                 time: '', timeRaw: 0, country: '',
+            };
+        });
+
+        lbUpcoming = scheduled.map((p,i) => {
+            const name = p.athlete?.displayName || '?';
+            const teeTime = p.status?.teeTime ? new Date(p.status.teeTime).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}) : '—';
+            return {
+                id: String(p.athlete?.id || i), name,
+                flag: flagEmoji(p.athlete?.flag?.alt || p.athlete?.country || ''),
+                nameHtml: name, country: '',
+                teeTime,
             };
         });
 
@@ -1536,6 +1608,8 @@ async function fetchLeaderboardESPN() {
     } catch(e) { showLbEmpty(); }
 }
 function showLbEmpty() {
+    lbUpcoming = [];
+    const upEl = document.getElementById('lb-upcoming'); if (upEl) upEl.innerHTML = '';
     document.getElementById('hdr-leader').textContent = 'Apr 9–12';
     // If we have pairings, show the field instead of a blank state
     if (pairingsData.length) {
