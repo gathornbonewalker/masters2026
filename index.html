@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE MASTERS 2026 — Augusta National</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg:           #06090a;
+            --bg-panel:     #0b1410;
+            --bg-card:      #0f1c14;
+            --bg-hover:     #142018;
+            --green:        #006747;
+            --green-bright: #00875f;
+            --green-dim:    #004430;
+            --gold:         #c9a84c;
+            --gold-light:   #e8c97a;
+            --gold-dim:     #7a6428;
+            --text:         #deeade;
+            --text-dim:     #6b8f6e;
+            --text-muted:   #304d34;
+            --red:          #d94f4f;
+            --border:       rgba(0,103,71,0.22);
+            --border-gold:  rgba(201,168,76,0.28);
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+        }
+
+        /* ── HEADER ─────────────────────────────────── */
+        #header {
+            height: 46px;
+            background: linear-gradient(90deg, #030b05 0%, #0c1c10 40%, #0c1c10 60%, #030b05 100%);
+            border-bottom: 1px solid var(--border-gold);
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            flex-shrink: 0;
+            position: relative;
+        }
+        #header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; left: 15%; right: 15%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            opacity: 0.5;
+        }
+        .logo-wrap {
+            display: flex; align-items: center; gap: 10px;
+            padding-right: 18px; border-right: 1px solid var(--border); margin-right: 14px;
+        }
+        .flagstick { width: 24px; height: 30px; position: relative; flex-shrink: 0; }
+        .flagstick::before { content:''; position:absolute; left:2px; bottom:0; width:2px; height:30px; background:var(--gold); border-radius:1px; }
+        .flagstick::after  { content:''; position:absolute; left:4px; top:3px; width:14px; height:9px; background:var(--gold); clip-path:polygon(0 0,100% 50%,0 100%); }
+        .logo-text { line-height:1; }
+        .logo-the    { font-family:'Playfair Display',serif; font-size:8px; letter-spacing:5px; color:var(--gold-dim); text-transform:uppercase; display:block; }
+        .logo-masters{ font-family:'Playfair Display',serif; font-size:20px; font-weight:900; color:var(--gold-light); letter-spacing:2px; display:block; line-height:1; }
+        .logo-sub    { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-muted); letter-spacing:3px; display:block; }
+
+        .status-badge {
+            display:flex; align-items:center; gap:5px; padding:3px 9px; border-radius:2px;
+            font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; letter-spacing:2px;
+            margin-right:14px; flex-shrink:0;
+        }
+        .badge-upcoming { background:rgba(201,168,76,0.08); border:1px solid rgba(201,168,76,0.3); color:var(--gold); }
+        .badge-live     { background:rgba(217,79,79,0.1);   border:1px solid rgba(217,79,79,0.4);  color:var(--red); }
+        .badge-dot { width:6px; height:6px; border-radius:50%; }
+        .badge-upcoming .badge-dot { background:var(--gold); }
+        .badge-live .badge-dot { background:var(--red); animation:blink 1.4s infinite; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+
+        .hdr-stats { display:flex; flex:1; gap:0; }
+        .hdr-stat { display:flex; flex-direction:column; padding:0 12px; border-right:1px solid var(--border); justify-content:center; gap:1px; }
+        .hdr-stat:last-child { border-right:none; }
+        .hdr-lbl { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-muted); letter-spacing:1.5px; text-transform:uppercase; line-height:1; }
+        .hdr-val { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; color:var(--text); line-height:1; white-space:nowrap; }
+        .hdr-val.gold  { color:var(--gold); }
+        .hdr-val.green { color:var(--green-bright); }
+        .hdr-countdown { display:flex; flex-direction:column; align-items:flex-end; padding-left:14px; border-left:1px solid var(--border); gap:1px; flex-shrink:0; }
+
+        /* ── TIMELINE ────────────────────────────────── */
+        #timeline { height:66px; background:#080e09; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; flex-direction:column; }
+        .tl-header { height:18px; display:flex; align-items:center; padding:0 14px; border-bottom:1px solid rgba(0,103,71,0.12); gap:8px; }
+        .tl-label { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-muted); letter-spacing:2px; text-transform:uppercase; }
+        .tl-track { flex:1; display:flex; align-items:center; gap:3px; padding:0 14px; overflow-x:auto; scrollbar-width:none; }
+        .tl-track::-webkit-scrollbar { display:none; }
+
+        .tee-card {
+            display:flex; align-items:center; gap:8px; background:var(--bg-card);
+            border:1px solid var(--border); border-radius:2px; padding:5px 10px;
+            flex-shrink:0; cursor:pointer; transition:border-color 0.2s,background 0.2s; min-width:185px;
+        }
+        .tee-card:hover { background:var(--bg-hover); border-color:var(--green); }
+        .tee-card.featured { border-color:rgba(201,168,76,0.35); }
+        .tee-card.on-course { border-color:var(--green); background:rgba(0,103,71,0.08); }
+        .tee-card.past { opacity:0.35; }
+        .tee-time { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--gold); white-space:nowrap; min-width:52px; }
+        .tee-players { font-size:9px; color:var(--text-dim); line-height:1.35; overflow:hidden; }
+        .tee-hole { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); margin-left:auto; white-space:nowrap; }
+
+        /* ── MAIN 3-COLUMN ───────────────────────────── */
+        #main { display:grid; grid-template-columns:272px 1fr 292px; flex:1; overflow:hidden; min-height:0; position:relative; }
+        #lb-resize-handle {
+            position:absolute; top:0; width:5px; cursor:col-resize; z-index:50;
+            background:transparent; transition:background 0.15s;
+        }
+        #lb-resize-handle:hover, #lb-resize-handle.dragging { background:rgba(0,103,71,0.5); }
+        .col { border-right:1px solid var(--border); overflow-y:auto; display:flex; flex-direction:column; scrollbar-width:thin; scrollbar-color:var(--green) transparent; min-height:0; }
+        .col:last-child { border-right:none; }
+        .col::-webkit-scrollbar { width:3px; }
+        .col::-webkit-scrollbar-thumb { background:var(--green); }
+
+        .col-hdr { display:flex; align-items:center; gap:8px; padding:7px 12px; border-bottom:1px solid var(--border); background:var(--bg-panel); position:sticky; top:0; z-index:5; flex-shrink:0; }
+        .col-hdr-accent { width:3px; height:11px; background:var(--green); border-radius:1px; }
+        .col-hdr-title { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:3px; color:var(--text-muted); text-transform:uppercase; flex:1; }
+        .col-hdr-tag { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--gold); }
+
+        /* ── LEADERBOARD ─────────────────────────────── */
+        .lb-col-hdr { display:grid; grid-template-columns:26px 20px 1fr 48px 48px 20px; padding:3px 8px; gap:4px; background:var(--bg-panel); border-bottom:1px solid var(--border); flex-shrink:0; }
+        .lb-ch { font-family:'JetBrains Mono',monospace; font-size:7px; color:var(--text-muted); text-align:center; letter-spacing:1px; text-transform:uppercase; }
+        .lb-ch.l { text-align:left; }
+        .lb-row { display:grid; grid-template-columns:26px 20px 1fr 48px 48px 20px; align-items:center; padding:5px 8px; gap:4px; border-bottom:1px solid rgba(0,103,71,0.07); cursor:pointer; transition:background 0.15s; }
+        .lb-row:hover { background:rgba(0,103,71,0.07); }
+        .lb-row.is-leader { background:rgba(0,103,71,0.1); }
+
+        .lb-star { font-size:12px; text-align:center; color:var(--text-muted); cursor:pointer; transition:color 0.15s, transform 0.15s; line-height:1; }
+        .lb-star:hover { color:var(--gold); transform:scale(1.3); }
+        .lb-star.fav { color:var(--gold); }
+        .lb-ch.sortable { cursor:pointer; user-select:none; }
+        .lb-ch.sortable:hover { color:var(--text-dim); }
+        .lb-ch.sort-active { color:var(--gold-light); }
+
+        /* ── LB SEARCH ───────────────────────────── */
+        .lb-search-wrap { display:flex; align-items:center; gap:3px; flex:1; min-width:0; }
+        .lb-search-icon { font-size:11px; color:var(--text-muted); flex-shrink:0; cursor:text; }
+        .lb-search {
+            background:transparent; border:none; border-bottom:1px solid transparent;
+            color:var(--text); font-family:'JetBrains Mono',monospace; font-size:9px;
+            width:50px; padding:1px 2px; outline:none; letter-spacing:0.5px;
+            transition:border-color 0.2s, width 0.25s;
+        }
+        .lb-search::placeholder { color:var(--text-muted); opacity:0.5; }
+        .lb-search:focus { border-bottom-color:var(--green); width:88px; }
+        .lb-search.active { border-bottom-color:var(--gold); width:88px; }
+
+        /* ── FAVORITES PANEL ─────────────────────────── */
+        #fav-panel { border-bottom:2px solid rgba(201,168,76,0.3); flex-shrink:0; }
+        .fav-hdr {
+            display:flex; align-items:center; gap:8px; padding:6px 10px;
+            background:rgba(201,168,76,0.06); border-bottom:1px solid rgba(201,168,76,0.15);
+            cursor:pointer; user-select:none;
+        }
+        .fav-hdr:hover { background:rgba(201,168,76,0.1); }
+        .fav-hdr-icon { color:var(--gold); font-size:11px; }
+        .fav-hdr-title { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:3px; color:var(--gold); text-transform:uppercase; flex:1; }
+        .fav-hdr-count { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-muted); }
+        .fav-hdr-toggle { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); transition:transform 0.2s; }
+        .fav-hdr-toggle.collapsed { transform:rotate(-90deg); }
+        #fav-rows { overflow:hidden; transition:max-height 0.25s ease; max-height:400px; }
+        #fav-rows.collapsed { max-height:0; }
+        .fav-empty { padding:10px 12px; font-family:'JetBrains Mono',monospace; font-size:8.5px; color:var(--text-muted); letter-spacing:1px; text-align:center; }
+        .fav-row {
+            display:grid; grid-template-columns:26px 20px 1fr 48px 48px 20px;
+            align-items:center; padding:5px 8px; gap:4px;
+            border-bottom:1px solid rgba(201,168,76,0.08);
+            cursor:pointer; transition:background 0.15s;
+            background:rgba(201,168,76,0.025);
+        }
+        .fav-row:hover { background:rgba(201,168,76,0.07); }
+        .lb-pos { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-muted); text-align:center; }
+        .lb-pos.gold { color:var(--gold); font-weight:700; }
+        .lb-flag { font-size:11px; text-align:center; }
+        .lb-info { overflow:hidden; }
+        .lb-name { font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .lb-thru { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-muted); }
+        .lb-score { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; text-align:center; }
+        .lb-today { font-family:'JetBrains Mono',monospace; font-size:11px; text-align:center; color:var(--text-dim); }
+        .under { color:#4ade80; }
+        .over  { color:var(--red); }
+        .even  { color:var(--text-dim); }
+        .cut-banner { display:flex; align-items:center; gap:8px; padding:3px 8px; background:rgba(217,79,79,0.06); }
+        .cut-line { flex:1; height:1px; background:rgba(217,79,79,0.25); }
+        .cut-text { font-family:'JetBrains Mono',monospace; font-size:8px; color:rgba(217,79,79,0.6); letter-spacing:2px; }
+        .lb-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; gap:10px; text-align:center; }
+        .lb-empty-title { font-family:'Playfair Display',serif; font-size:16px; color:var(--gold); }
+        .lb-empty-sub { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); letter-spacing:2px; }
+
+        /* ── CENTER: STREAM ──────────────────────────── */
+        #center-col { overflow:hidden; }
+
+        /* Channel tab strip */
+        .channel-tabs {
+            display:flex; background:#060c07; border-bottom:1px solid var(--border);
+            overflow-x:auto; scrollbar-width:none; flex-shrink:0;
+        }
+        .channel-tabs::-webkit-scrollbar { display:none; }
+        .ch-tab {
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            padding:6px 14px; gap:2px; cursor:pointer; border-right:1px solid var(--border);
+            transition:background 0.2s; flex-shrink:0; min-width:90px; position:relative;
+        }
+        .ch-tab:hover { background:rgba(0,103,71,0.08); }
+        .ch-tab.active { background:rgba(0,103,71,0.14); }
+        .ch-tab.active::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--green); }
+        .ch-tab-name { font-family:'JetBrains Mono',monospace; font-size:8.5px; color:var(--text-dim); letter-spacing:1px; text-align:center; line-height:1.2; }
+        .ch-tab.active .ch-tab-name { color:var(--green-bright); }
+        .ch-tab-status { font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:1px; text-align:center; }
+        .ch-tab-status.live { color:var(--red); }
+        .ch-tab-status.off  { color:var(--text-muted); }
+        .ch-tab-status.radio { color:var(--gold); }
+
+        /* Stream player area */
+        .stream-area {
+            position:relative; background:#000; flex-shrink:0;
+        }
+        #stream-video {
+            width:100%; aspect-ratio:16/9; display:block; background:#000;
+        }
+
+        /* Slate (off air) */
+        .stream-slate {
+            position:absolute; inset:0;
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            gap:12px;
+            background:radial-gradient(ellipse at center, #0d2014 0%, #060a07 70%);
+        }
+        .stream-slate::before {
+            content:''; position:absolute; inset:0;
+            background:
+                repeating-linear-gradient(45deg, transparent 0px,transparent 50px,rgba(0,103,71,0.022) 50px,rgba(0,103,71,0.022) 51px),
+                repeating-linear-gradient(-45deg,transparent 0px,transparent 50px,rgba(0,103,71,0.018) 50px,rgba(0,103,71,0.018) 51px);
+        }
+        .slate-img {
+            position:absolute; inset:0; object-fit:cover; width:100%; height:100%;
+            opacity:0.18; pointer-events:none;
+        }
+        .slate-content { position:relative; z-index:1; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; }
+        .slate-off-badge {
+            display:inline-flex; align-items:center; gap:5px;
+            background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15);
+            padding:3px 10px; border-radius:2px;
+            font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:3px; color:rgba(255,255,255,0.5);
+        }
+        .slate-channel-name {
+            font-family:'Playfair Display',serif; font-size:18px; font-weight:700;
+            color:var(--gold); text-shadow:0 0 30px rgba(201,168,76,0.3);
+        }
+        .slate-caption { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); letter-spacing:2px; text-transform:uppercase; }
+        .slate-countdown { font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; color:var(--text); letter-spacing:3px; }
+
+        /* Pre-tournament full placeholder (shown when nothing selected or before event) */
+        .pre-event-slate {
+            aspect-ratio:16/9;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+            background:radial-gradient(ellipse at center, #0d2014 0%, #060a07 70%);
+            position:relative; overflow:hidden; flex-shrink:0;
+        }
+        .pre-event-slate::before {
+            content:''; position:absolute; inset:0;
+            background:
+                repeating-linear-gradient(45deg,transparent 0,transparent 50px,rgba(0,103,71,0.025) 50px,rgba(0,103,71,0.025) 51px),
+                repeating-linear-gradient(-45deg,transparent 0,transparent 50px,rgba(0,103,71,0.02) 50px,rgba(0,103,71,0.02) 51px);
+        }
+        .pre-logo { position:relative; z-index:1; text-align:center; }
+        .pre-logo-the    { font-family:'Playfair Display',serif; font-style:italic; font-size:14px; color:var(--gold-dim); letter-spacing:6px; display:block; margin-bottom:2px; }
+        .pre-logo-masters{ font-family:'Playfair Display',serif; font-size:42px; font-weight:900; color:var(--gold); letter-spacing:4px; display:block; text-shadow:0 0 40px rgba(201,168,76,0.3); line-height:1; }
+        .pre-logo-year   { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:8px; color:var(--text-muted); display:block; margin-top:4px; }
+        .pre-cdown-wrap  { position:relative; z-index:1; text-align:center; }
+        .pre-cdown-lbl   { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); letter-spacing:3px; text-transform:uppercase; margin-bottom:6px; }
+        .pre-cdown       { font-family:'JetBrains Mono',monospace; font-size:30px; font-weight:700; color:var(--text); letter-spacing:4px; }
+        .pre-btns { display:flex; gap:8px; position:relative; z-index:1; }
+        .pre-btn { padding:7px 16px; border:1px solid var(--green); background:rgba(0,103,71,0.12); color:var(--green-bright); font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:2px; text-decoration:none; border-radius:2px; cursor:pointer; transition:background 0.2s; }
+        .pre-btn:hover { background:rgba(0,103,71,0.28); }
+        .pre-btn.gold { border-color:var(--gold-dim); background:rgba(201,168,76,0.08); color:var(--gold); }
+        .pre-btn.gold:hover { background:rgba(201,168,76,0.18); }
+
+        /* Audio player bar (for radio) */
+        .audio-bar {
+            aspect-ratio:16/9;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+            background:radial-gradient(ellipse at center, #0a1a0d 0%, #060a07 70%);
+            flex-shrink:0; position:relative;
+        }
+        .audio-icon { font-size:40px; opacity:0.5; }
+        .audio-title { font-family:'Playfair Display',serif; font-size:20px; color:var(--gold); }
+        .audio-sub { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); letter-spacing:3px; }
+        #radio-audio { display:none; }
+
+        /* Scroll area for news */
+        .center-scroll { flex:1; overflow-y:auto; min-height:0; scrollbar-width:thin; scrollbar-color:var(--green) transparent; }
+        .center-scroll::-webkit-scrollbar { width:3px; }
+        .center-scroll::-webkit-scrollbar-thumb { background:var(--green); }
+
+        .news-card { padding:10px 14px; border-bottom:1px solid rgba(0,103,71,0.08); cursor:pointer; transition:background 0.15s; }
+        .news-card:hover { background:rgba(0,103,71,0.05); }
+        .news-src { font-family:'JetBrains Mono',monospace; font-size:7.5px; color:var(--green); letter-spacing:2px; text-transform:uppercase; margin-bottom:3px; }
+        .news-hl  { font-size:11.5px; font-weight:600; color:var(--text); line-height:1.4; margin-bottom:4px; }
+        .news-desc{ font-size:10px; color:var(--text-dim); line-height:1.5; margin-bottom:3px; }
+        .news-time{ font-family:'JetBrains Mono',monospace; font-size:8.5px; color:var(--text-muted); }
+
+        /* ── RIGHT COLUMN ────────────────────────────── */
+        .section { border-bottom:1px solid var(--border); flex-shrink:0; }
+        .sec-hdr { display:flex; align-items:center; gap:8px; padding:7px 12px; border-bottom:1px solid var(--border); background:var(--bg-panel); }
+        .sec-title { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:3px; color:var(--text-muted); text-transform:uppercase; flex:1; }
+        .sec-tag { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-muted); }
+
+        /* Weather */
+        .weather-grid { display:grid; grid-template-columns:1fr 1fr; padding:12px; }
+        .w-temp { font-family:'JetBrains Mono',monospace; font-size:34px; font-weight:700; color:var(--text); line-height:1; }
+        .w-icon { font-size:20px; }
+        .w-desc { font-size:11px; color:var(--text-dim); margin-top:2px; }
+        .w-loc  { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-muted); letter-spacing:1px; margin-top:4px; }
+        .w-stats{ display:flex; flex-direction:column; gap:5px; }
+        .w-row  { display:flex; justify-content:space-between; align-items:center; }
+        .w-lbl  { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-muted); }
+        .w-val  { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text); }
+        .forecast-row { display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid var(--border); }
+        .fc-day { padding:8px 6px; text-align:center; border-right:1px solid var(--border); }
+        .fc-day:last-child { border-right:none; }
+        .fc-name { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-muted); letter-spacing:1px; margin-bottom:3px; }
+        .fc-icon { font-size:14px; margin-bottom:2px; }
+        .fc-hi   { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text); }
+        .fc-lo   { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); }
+        .fc-round{ font-family:'JetBrains Mono',monospace; font-size:7px; color:var(--gold); letter-spacing:1px; margin-top:2px; }
+
+        /* Featured groups */
+        .fg-row { padding:8px 12px; border-bottom:1px solid rgba(0,103,71,0.07); display:flex; align-items:flex-start; gap:10px; }
+        .fg-time { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:var(--gold); white-space:nowrap; min-width:55px; padding-top:1px; }
+        .fg-info { flex:1; }
+        .fg-players { font-size:10px; color:var(--text); line-height:1.5; }
+        .fg-hole { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-muted); }
+        .fg-badge { font-family:'JetBrains Mono',monospace; font-size:7px; color:var(--gold); background:rgba(201,168,76,0.08); border:1px solid rgba(201,168,76,0.2); padding:1px 5px; border-radius:1px; letter-spacing:1px; white-space:nowrap; align-self:center; }
+
+        /* Records */
+        .rec-row { display:flex; justify-content:space-between; align-items:center; padding:7px 12px; border-bottom:1px solid rgba(0,103,71,0.07); gap:10px; }
+        .rec-info { flex:1; }
+        .rec-label { font-size:10px; color:var(--text-dim); }
+        .rec-holder{ font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-muted); margin-top:1px; }
+        .rec-val   { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; color:var(--gold); white-space:nowrap; }
+
+        /* Course */
+        .ci-row { display:flex; justify-content:space-between; align-items:center; padding:5px 12px; border-bottom:1px solid rgba(0,103,71,0.06); }
+        .ci-key { font-family:'JetBrains Mono',monospace; font-size:8.5px; color:var(--text-muted); letter-spacing:1px; }
+        .ci-val { font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--text); }
+        .ci-val.gold { color:var(--gold); }
+
+        /* Holes chart */
+        .holes-chart { padding:10px 12px; display:grid; grid-template-columns:repeat(9,1fr); gap:2px; }
+        .hole-cell { display:flex; flex-direction:column; align-items:center; gap:2px; }
+        .hole-num { font-family:'JetBrains Mono',monospace; font-size:7px; color:var(--text-muted); }
+        .hole-par { font-family:'JetBrains Mono',monospace; font-size:8.5px; color:var(--text-dim); background:rgba(0,103,71,0.12); border:1px solid rgba(0,103,71,0.2); border-radius:1px; width:20px; text-align:center; padding:1px 0; }
+        .hole-par.par3 { color:var(--gold); border-color:rgba(201,168,76,0.25); background:rgba(201,168,76,0.06); }
+        .hole-par.par5 { color:var(--green-bright); border-color:rgba(0,135,95,0.3); background:rgba(0,135,95,0.08); }
+
+        .loading-msg { display:flex; align-items:center; justify-content:center; padding:20px; font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); letter-spacing:2px; }
+        .dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+
+        /* ── PLAYER CARD MODAL ───────────────────────── */
+        #player-modal {
+            display:none; position:fixed; inset:0; z-index:100;
+            background:rgba(0,0,0,0.75); backdrop-filter:blur(4px);
+            align-items:center; justify-content:center;
+        }
+        #player-modal.open { display:flex; }
+        .pm-card {
+            background: var(--bg-panel);
+            border:1px solid var(--border-gold);
+            border-radius:4px;
+            width:580px; max-width:95vw;
+            max-height:90vh;
+            overflow-y:auto;
+            scrollbar-width:thin;
+            scrollbar-color:var(--green) transparent;
+            position:relative;
+            box-shadow:0 20px 60px rgba(0,0,0,0.8);
+        }
+        .pm-card::-webkit-scrollbar { width:3px; }
+        .pm-card::-webkit-scrollbar-thumb { background:var(--green); }
+
+        .pm-header {
+            display:flex; align-items:center; gap:16px;
+            padding:16px 20px;
+            background:linear-gradient(135deg, #0a1a0c 0%, #0f2015 100%);
+            border-bottom:1px solid var(--border-gold);
+            position:relative;
+        }
+        .pm-photo {
+            width:80px; height:80px; border-radius:3px; object-fit:cover;
+            border:1px solid var(--border); background:var(--bg-card);
+            flex-shrink:0;
+        }
+        .pm-photo-placeholder {
+            width:80px; height:80px; border-radius:3px;
+            border:1px solid var(--border); background:var(--bg-card);
+            display:flex; align-items:center; justify-content:center;
+            font-size:28px; flex-shrink:0;
+        }
+        .pm-identity { flex:1; }
+        .pm-name {
+            font-family:'Playfair Display',serif;
+            font-size:22px; font-weight:700;
+            color:var(--gold-light); line-height:1.1;
+        }
+        .pm-country { font-size:11px; color:var(--text-dim); margin-top:3px; display:flex; align-items:center; gap:6px; }
+        .pm-badges { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+        .pm-badge {
+            font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:1.5px;
+            padding:2px 8px; border-radius:1px;
+        }
+        .pm-badge.champ { background:rgba(201,168,76,0.15); border:1px solid rgba(201,168,76,0.4); color:var(--gold); }
+        .pm-badge.amateur { background:rgba(0,103,71,0.15); border:1px solid rgba(0,103,71,0.4); color:var(--green-bright); }
+        .pm-badge.first { background:rgba(100,150,200,0.1); border:1px solid rgba(100,150,200,0.3); color:#8ab4d4; }
+        .pm-score-summary {
+            display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0;
+        }
+        .pm-topar { font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:700; }
+        .pm-pos   { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-muted); }
+        .pm-teetime { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--gold-dim); }
+
+        .pm-close {
+            position:absolute; top:10px; right:12px;
+            font-family:'JetBrains Mono',monospace; font-size:16px; color:var(--text-muted);
+            cursor:pointer; background:none; border:none; line-height:1;
+            transition:color 0.2s;
+        }
+        .pm-close:hover { color:var(--text); }
+        .pm-fav-btn {
+            background:transparent; border:1px solid rgba(201,168,76,0.45); border-radius:2px;
+            color:var(--gold); font-family:'JetBrains Mono',monospace; font-size:8px;
+            letter-spacing:2px; padding:5px 12px; cursor:pointer; margin-top:8px;
+            transition:background 0.15s, border-color 0.15s; white-space:nowrap;
+        }
+        .pm-fav-btn:hover { background:rgba(201,168,76,0.12); border-color:var(--gold); }
+        .pm-fav-btn.is-fav { background:rgba(201,168,76,0.12); border-color:var(--gold); }
+
+        /* Scorecard */
+        .pm-section-title {
+            font-family:'JetBrains Mono',monospace; font-size:8px;
+            letter-spacing:3px; color:var(--text-muted); text-transform:uppercase;
+            padding:10px 20px 6px;
+            border-bottom:1px solid var(--border);
+            background:var(--bg-panel);
+        }
+        .pm-scorecard { padding:12px 16px; overflow-x:auto; }
+        .sc-table {
+            width:100%; border-collapse:collapse;
+            font-family:'JetBrains Mono',monospace; font-size:10px;
+        }
+        .sc-table th {
+            color:var(--text-muted); font-size:8px; letter-spacing:1px;
+            padding:3px 5px; text-align:center; border-bottom:1px solid var(--border);
+            font-weight:400;
+        }
+        .sc-table td {
+            padding:3px 5px; text-align:center;
+            border:1px solid rgba(0,103,71,0.08);
+        }
+        .sc-label { color:var(--text-muted); font-size:8px; text-align:left !important; padding-left:8px !important; }
+        .sc-par   { color:var(--text-muted); }
+        .sc-total { color:var(--text); font-weight:700; background:rgba(0,103,71,0.08); }
+        .sc-sum   { color:var(--gold); font-weight:700; background:rgba(0,103,71,0.12); }
+        /* Hole score indicators */
+        .sc-eagle  { color:#f5d020; font-weight:700; }
+        .sc-birdie { color:#4ade80; }
+        .sc-par-s  { color:var(--text-dim); }
+        .sc-bogey  { color:var(--red); }
+        .sc-double { color:#a03030; font-weight:700; }
+        .sc-empty  { color:var(--text-muted); }
+
+        .pm-link-row {
+            display:flex; justify-content:center; padding:14px;
+            border-top:1px solid var(--border);
+            gap:10px;
+        }
+        .pm-link {
+            padding:7px 18px; border:1px solid var(--green);
+            background:rgba(0,103,71,0.1); color:var(--green-bright);
+            font-family:'JetBrains Mono',monospace; font-size:9px;
+            letter-spacing:2px; text-decoration:none; border-radius:2px;
+            transition:background 0.2s;
+        }
+        .pm-link:hover { background:rgba(0,103,71,0.25); }
+        .dot.green { background:var(--green); }
+        .dot.gold  { background:var(--gold); }
+
+        #refresh-footer { position:fixed; bottom:6px; right:10px; font-family:'JetBrains Mono',monospace; font-size:7.5px; color:var(--text-muted); letter-spacing:1px; pointer-events:none; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:translateY(0)} }
+        .fade-in { animation:fadeUp 0.3s ease; }
+    </style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════ -->
+<div id="header">
+    <div class="logo-wrap">
+        <div class="flagstick"></div>
+        <div class="logo-text">
+            <span class="logo-the">The</span>
+            <span class="logo-masters">MASTERS</span>
+            <span class="logo-sub">Augusta National · 2026</span>
+        </div>
+    </div>
+    <div id="status-badge" class="status-badge badge-upcoming">
+        <div class="badge-dot"></div><span>UPCOMING</span>
+    </div>
+    <div class="hdr-stats">
+        <div class="hdr-stat"><span class="hdr-lbl">Round</span><span class="hdr-val" id="hdr-round">—</span></div>
+        <div class="hdr-stat"><span class="hdr-lbl">Leader</span><span class="hdr-val gold" id="hdr-leader">Apr 9–12</span></div>
+        <div class="hdr-stat"><span class="hdr-lbl">Score</span><span class="hdr-val green" id="hdr-score">—</span></div>
+        <div class="hdr-stat"><span class="hdr-lbl">Cut</span><span class="hdr-val" id="hdr-cut">—</span></div>
+        <div class="hdr-stat"><span class="hdr-lbl">Temp</span><span class="hdr-val" id="hdr-temp">—</span></div>
+        <div class="hdr-stat"><span class="hdr-lbl">Wind</span><span class="hdr-val" id="hdr-wind">—</span></div>
+        <div class="hdr-stat"><span class="hdr-lbl">Field</span><span class="hdr-val">88 Players</span></div>
+        <div class="hdr-stat"><span class="hdr-lbl">Purse</span><span class="hdr-val gold">$21,000,000</span></div>
+        <div class="hdr-stat"><span class="hdr-lbl">Winner</span><span class="hdr-val gold">$3,600,000</span></div>
+    </div>
+    <div class="hdr-countdown">
+        <span class="hdr-lbl">Round 1 Tee-off</span>
+        <span class="hdr-val gold" id="hdr-countdown">—</span>
+    </div>
+</div>
+
+<!-- ═══ TIMELINE ═════════════════════════════════════════════ -->
+<div id="timeline">
+    <div class="tl-header">
+        <div class="dot green"></div>
+        <span class="tl-label">Tee Times — Round 1 · Thursday April 9, 2026 · EDT</span>
+        <span class="tl-label" style="margin-left:auto">★ Featured</span>
+    </div>
+    <div class="tl-track" id="tl-track"><div class="loading-msg" style="padding:8px 14px">LOADING TEE TIMES...</div></div>
+</div>
+
+<!-- ═══ MAIN ══════════════════════════════════════════════════ -->
+<div id="main">
+    <div id="lb-resize-handle"></div>
+
+    <!-- ── LEFT: Leaderboard ─────────────────────────────── -->
+    <div class="col" id="lb-col">
+        <div class="col-hdr">
+            <div class="col-hdr-accent"></div>
+            <span class="col-hdr-title">Leaderboard</span>
+            <div class="lb-search-wrap">
+                <span class="lb-search-icon" onclick="document.getElementById('lb-search').focus()">⌕</span>
+                <input id="lb-search" class="lb-search" type="text" placeholder="search…"
+                       oninput="setLbFilter(this.value)" autocomplete="off" spellcheck="false">
+            </div>
+            <span class="col-hdr-tag" id="lb-round-tag"></span>
+        </div>
+        <!-- Favorites panel -->
+        <div id="fav-panel">
+            <div class="fav-hdr" onclick="toggleFavPanel()">
+                <span class="fav-hdr-icon">★</span>
+                <span class="fav-hdr-title">Favorites</span>
+                <span class="fav-hdr-count" id="fav-count">0 players</span>
+                <span class="fav-hdr-toggle" id="fav-toggle">▾</span>
+            </div>
+            <div id="fav-rows">
+                <div class="fav-empty">☆ Star any player below to track them here</div>
+            </div>
+        </div>
+
+        <div class="lb-col-hdr" id="lb-col-hdr">
+            <span class="lb-ch">#</span><span class="lb-ch"></span>
+            <span class="lb-ch l">Player</span><span class="lb-ch">TOT</span><span class="lb-ch">RND</span><span class="lb-ch">☆</span>
+        </div>
+        <div id="lb-rows"><div class="loading-msg">FETCHING DATA...</div></div>
+    </div>
+
+    <!-- ── CENTER: Stream + News ─────────────────────────── -->
+    <div class="col" id="center-col">
+
+        <!-- Channel selector tabs (populated by JS) -->
+        <div class="channel-tabs" id="channel-tabs"></div>
+
+        <!-- Stream area: shows pre-event, slate, video, or radio depending on state -->
+        <div id="stream-area">
+            <!-- Pre-tournament placeholder (hidden once channels load) -->
+            <div class="pre-event-slate" id="pre-event-slate">
+                <div class="pre-logo">
+                    <span class="pre-logo-the">The</span>
+                    <span class="pre-logo-masters">MASTERS</span>
+                    <span class="pre-logo-year">2 0 2 6</span>
+                </div>
+                <div class="pre-cdown-wrap">
+                    <div class="pre-cdown-lbl">First Tee Shot In</div>
+                    <div class="pre-cdown" id="pre-cdown">—</div>
+                </div>
+                <div class="pre-btns">
+                    <a class="pre-btn gold" href="https://www.masters.com/en_US/live/index.html" target="_blank">MASTERS.COM / WATCH</a>
+                    <a class="pre-btn" href="https://www.masters.com/en_US/players/pairings/index.html" target="_blank">TEE TIMES</a>
+                </div>
+            </div>
+
+            <!-- Per-channel slate (off air) -->
+            <div class="stream-slate" id="stream-slate" style="display:none; aspect-ratio:16/9; position:relative;">
+                <img id="slate-img" class="slate-img" src="" alt="">
+                <div class="slate-content">
+                    <div class="slate-off-badge">● OFF AIR</div>
+                    <div class="slate-channel-name" id="slate-channel-name">—</div>
+                    <div class="slate-caption" id="slate-caption">Coverage continues April 9th</div>
+                    <div class="slate-countdown" id="slate-countdown"></div>
+                </div>
+            </div>
+
+            <!-- YouTube embed (always available, no CORS) -->
+            <iframe id="yt-iframe" style="display:none; width:100%; aspect-ratio:16/9; border:none;"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen src="about:blank"></iframe>
+
+            <!-- HLS video player -->
+            <video id="stream-video" style="display:none; width:100%; aspect-ratio:16/9; background:#000;" playsinline controls></video>
+
+            <!-- Radio player -->
+            <div class="audio-bar" id="audio-bar" style="display:none;">
+                <div class="audio-icon">📻</div>
+                <div class="audio-title">Masters Radio</div>
+                <div class="audio-sub" id="radio-status">OFF AIR — Coverage begins April 9th</div>
+                <audio id="radio-audio" controls style="width:80%; margin-top:8px;"></audio>
+            </div>
+        </div>
+
+        <!-- News scroll -->
+        <div class="col-hdr" style="position:sticky;top:0;flex-shrink:0">
+            <div class="col-hdr-accent"></div>
+            <span class="col-hdr-title">Masters News &amp; Updates</span>
+            <span class="col-hdr-tag" id="news-count"></span>
+        </div>
+        <div class="center-scroll" id="news-list">
+            <div class="loading-msg">FETCHING NEWS...</div>
+        </div>
+    </div>
+
+    <!-- ── RIGHT: Info panels ─────────────────────────────── -->
+    <div class="col" id="right-col">
+
+        <!-- Weather -->
+        <div class="section">
+            <div class="sec-hdr"><div class="col-hdr-accent"></div><span class="sec-title">Augusta Weather</span><span class="sec-tag" id="weather-updated"></span></div>
+            <div id="weather-body"><div class="loading-msg">FETCHING...</div></div>
+        </div>
+
+        <!-- Featured Groups -->
+        <div class="section">
+            <div class="sec-hdr"><div class="col-hdr-accent"></div><span class="sec-title">Featured Groups · R1</span><span class="sec-tag">THU APR 9</span></div>
+            <div id="fg-list"><div class="loading-msg">LOADING...</div></div>
+        </div>
+
+        <!-- Augusta Records -->
+        <div class="section">
+            <div class="sec-hdr"><div class="col-hdr-accent"></div><span class="sec-title">Augusta Records</span></div>
+            <div class="rec-row"><div class="rec-info"><div class="rec-label">Lowest 72-hole total</div><div class="rec-holder">Tiger Woods · 1997</div></div><div class="rec-val">270 (-18)</div></div>
+            <div class="rec-row"><div class="rec-info"><div class="rec-label">Lowest single round</div><div class="rec-holder">Multiple players</div></div><div class="rec-val">63</div></div>
+            <div class="rec-row"><div class="rec-info"><div class="rec-label">Most Masters titles</div><div class="rec-holder">Jack Nicklaus</div></div><div class="rec-val">6</div></div>
+            <div class="rec-row"><div class="rec-info"><div class="rec-label">Youngest champion</div><div class="rec-holder">Tiger Woods · 1997 · Age 21</div></div><div class="rec-val">21 yrs</div></div>
+            <div class="rec-row"><div class="rec-info"><div class="rec-label">Oldest champion</div><div class="rec-holder">Jack Nicklaus · 1986 · Age 46</div></div><div class="rec-val">46 yrs</div></div>
+            <div class="rec-row"><div class="rec-info"><div class="rec-label">Largest winning margin</div><div class="rec-holder">Tiger Woods · 1997</div></div><div class="rec-val">12 shots</div></div>
+        </div>
+
+        <!-- Course -->
+        <div class="section">
+            <div class="sec-hdr"><div class="col-hdr-accent"></div><span class="sec-title">Course · Augusta National GC</span></div>
+            <div class="ci-row"><span class="ci-key">Par</span><span class="ci-val">72</span></div>
+            <div class="ci-row"><span class="ci-key">Yards</span><span class="ci-val">7,555</span></div>
+            <div class="ci-row"><span class="ci-key">Par 3 / 4 / 5</span><span class="ci-val">4 / 10 / 4</span></div>
+            <div class="ci-row"><span class="ci-key">Amen Corner</span><span class="ci-val">Holes 11 · 12 · 13</span></div>
+            <div class="ci-row"><span class="ci-key">Defending champ</span><span class="ci-val gold">Rory McIlroy</span></div>
+            <div class="ci-row"><span class="ci-key">World Rank #1</span><span class="ci-val gold">Scottie Scheffler</span></div>
+            <div class="holes-chart" id="holes-chart"></div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ═══ PLAYER CARD MODAL ════════════════════════════════════ -->
+<div id="player-modal" onclick="if(event.target===this)closePlayerCard()">
+    <div class="pm-card" id="pm-card">
+        <button class="pm-close" onclick="closePlayerCard()">✕</button>
+        <div class="pm-header">
+            <div id="pm-photo-wrap"></div>
+            <div class="pm-identity">
+                <div class="pm-name" id="pm-name">—</div>
+                <div class="pm-country" id="pm-country"></div>
+                <div class="pm-badges" id="pm-badges"></div>
+                <button id="pm-fav-btn" class="pm-fav-btn" onclick="toggleModalFav()">☆ Add to Favorites</button>
+            </div>
+            <div class="pm-score-summary">
+                <div class="pm-topar" id="pm-topar"></div>
+                <div class="pm-pos" id="pm-pos"></div>
+                <div class="pm-teetime" id="pm-teetime"></div>
+            </div>
+        </div>
+        <div class="pm-section-title" id="pm-sc-title">SCORECARD</div>
+        <div class="pm-scorecard" id="pm-scorecard"></div>
+        <div class="pm-link-row" id="pm-links"></div>
+    </div>
+</div>
+
+<div id="refresh-footer">AUTO-REFRESH · <span id="rf-timer">60</span>s</div>
+
+<script>
+'use strict';
+
+// ─── CONFIG ──────────────────────────────────────────────────
+const AUGUSTA_LAT  = 33.503;
+const AUGUSTA_LON  = -82.022;
+const ROUND1_START = new Date('2026-04-09T07:40:00-04:00'); // first tee shot
+const LIVE_VIDEO_URL = 'https://www.masters.com/en_US/cms/feeds/live/liveVideo.json';
+const PAIRINGS_URL   = 'https://www.masters.com/en_US/scores/feeds/2026/pairings.json';
+const SCORES_URL     = 'https://www.masters.com/en_US/scores/feeds/2026/scores.json';
+
+// YouTube — Masters official channel live stream embed
+const YT_EMBED = 'https://www.youtube.com/embed/live_stream?channel=UCsx_MAAT23VOBMXE0Zyh5mg&autoplay=1&mute=0';
+
+// Augusta hole data [par, yards]
+const HOLES = [
+    [4,445],[5,575],[4,350],[3,240],[4,455],[3,180],[4,450],[5,570],[4,460],
+    [4,495],[4,505],[3,155],[5,510],[4,440],[5,550],[3,170],[4,440],[4,465],[4,465]
+];
+
+// Featured group IDs (player last names) — highlighted in timeline
+const FEATURED_NAMES = ['Scheffler','McIlroy','DeChambeau','Rahm','Spieth','Koepka','Matsuyama','Hovland'];
+
+// Country flag map
+const FLAGS = {
+    'USA':'🇺🇸','United States':'🇺🇸','NIR':'🇬🇧','ENG':'🇬🇧','SCO':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','WAL':'🏴󠁧󠁢󠁷󠁬󠁳󠁿',
+    'IRL':'🇮🇪','ESP':'🇪🇸','GER':'🇩🇪','AUS':'🇦🇺','RSA':'🇿🇦','JPN':'🇯🇵',
+    'KOR':'🇰🇷','CAN':'🇨🇦','SWE':'🇸🇪','NOR':'🇳🇴','DEN':'🇩🇰','FRA':'🇫🇷',
+    'ITA':'🇮🇹','ARG':'🇦🇷','MEX':'🇲🇽','CHN':'🇨🇳','TWN':'🇹🇼','NZL':'🇳🇿',
+    'BEL':'🇧🇪','AUT':'🇦🇹','FIJ':'🇫🇯','FIN':'🇫🇮','COL':'🇨🇴','THA':'🇹🇭',
+};
+
+// ─── STATE ───────────────────────────────────────────────────
+let streamChannels   = [];  // from liveVideo.json
+let activeChannelId  = null;
+let hlsInstance      = null;
+let pairingsData     = [];  // all groups from pairings.json
+let scoresData       = null; // full scores.json data object
+
+// ─── LEADERBOARD STATE ───────────────────────────────────────
+let lbPlayers  = [];          // normalized player array for current view
+let lbMode     = 'live';      // 'live' | 'espn' | 'field'
+let lbSortCol  = 'pos';       // active sort column
+let lbSortDir  = 'asc';       // 'asc' | 'desc'
+let lbFilter   = '';          // search string
+
+// ─── HELPERS ─────────────────────────────────────────────────
+const fmtScore = raw => {
+    if (raw == null || raw === '') return '—';
+    // ESPN sometimes returns score as an object {value, displayValue}
+    if (typeof raw === 'object') raw = raw.displayValue ?? raw.value ?? '';
+    const s = String(raw).trim();
+    if (!s || s === 'E' || s === 'Even' || s === '0') return 'E';
+    const n = parseInt(s);
+    if (isNaN(n)) return s || '—';
+    if (n === 0) return 'E';
+    return n > 0 ? `+${n}` : `${n}`;
+};
+const scoreCls = raw => {
+    if (!raw) return '';
+    if (typeof raw === 'object') raw = raw.displayValue ?? raw.value ?? '';
+    const n = parseInt(raw);
+    return isNaN(n)||n===0 ? 'even' : n<0 ? 'under' : 'over';
+};
+const flagEmoji = code => FLAGS[code] || '🌐';
+const timeAgo = d => { const s=Math.floor((Date.now()-d)/1000); if(s<60)return`${s}s ago`; if(s<3600)return`${Math.floor(s/60)}m ago`; if(s<86400)return`${Math.floor(s/3600)}h ago`; return`${Math.floor(s/86400)}d ago`; };
+
+// Numeric score for sorting (handles objects & 'E')
+function scoreToNum(raw) {
+    if (raw == null) return 0;
+    if (typeof raw === 'object') raw = raw.displayValue ?? raw.value ?? '0';
+    const s = String(raw).trim();
+    if (!s || s === 'E' || s.toLowerCase() === 'even') return 0;
+    return parseInt(s) || 0;
+}
+// Parse "7:40 AM" → minutes since midnight for time-sort
+function parseTimeToMins(t) {
+    if (!t) return 9999;
+    const m = t.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+    if (!m) return 9999;
+    let h = parseInt(m[1]), min = parseInt(m[2]);
+    const ap = (m[3]||'').toUpperCase();
+    if (ap === 'PM' && h < 12) h += 12;
+    if (ap === 'AM' && h === 12) h = 0;
+    return h * 60 + min;
+}
+
+// ─── SORT / FILTER / RENDER ──────────────────────────────────
+function setLbSort(col) {
+    if (!col || col === 'flag') return;
+    if (lbSortCol === col) {
+        lbSortDir = lbSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        lbSortCol = col;
+        lbSortDir = 'asc';
+    }
+    applyLbView();
+}
+
+function setLbFilter(val) {
+    lbFilter = val.trim();
+    const el = document.getElementById('lb-search');
+    if (el) el.classList.toggle('active', lbFilter.length > 0);
+    applyLbView();
+}
+
+function renderLbColHdr() {
+    const el = document.querySelector('.lb-col-hdr');
+    if (!el) return;
+    const ch = (col, label, extraCls='') => {
+        const active = lbSortCol === col;
+        const arrow  = active ? (lbSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+        return `<span class="lb-ch${extraCls} sortable${active?' sort-active':''}" onclick="setLbSort('${col}')">${label}${arrow}</span>`;
+    };
+    if (lbMode === 'field') {
+        const timeActive = lbSortCol === 'time';
+        const timeArrow  = timeActive ? (lbSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+        el.innerHTML = `${ch('pos','#')}${ch('flag','')}${ch('name','Player',' l')}` +
+            `<span class="lb-ch sortable${timeActive?' sort-active':''}" style="grid-column:span 2;text-align:left;padding-left:4px" onclick="setLbSort('time')">TEE TIME · R1${timeArrow}</span>` +
+            `<span class="lb-ch">☆</span>`;
+    } else {
+        el.innerHTML = `${ch('pos','#')}${ch('flag','')}${ch('name','Player',' l')}${ch('tot','TOT')}${ch('today','RND')}<span class="lb-ch">☆</span>`;
+    }
+}
+
+function buildLbRowHtml(p, i) {
+    const isFav = favorites.has(p.id);
+    const star  = `<span class="lb-star${isFav?' fav':''}" data-pid="${p.id}" onclick="toggleFavorite('${p.id}',event)">${isFav?'★':'☆'}</span>`;
+    const click = p.id ? `onclick="showPlayerCard('${p.id}')"` : '';
+    if (lbMode === 'field') {
+        return `<div class="lb-row fade-in" ${click} style="${p.id?'cursor:pointer':''}">
+            <span class="lb-pos">${p.pos}</span>
+            <span class="lb-flag">${p.flag}</span>
+            <div class="lb-info">
+                <div class="lb-name">${p.nameHtml}</div>
+                <div class="lb-thru">${p.country}</div>
+            </div>
+            <span class="lb-score even" style="font-size:9px;grid-column:span 2;text-align:left;padding-left:4px;color:var(--text-muted)">${p.time}</span>
+            ${star}
+        </div>`;
+    } else {
+        const leader = i === 0 && !lbFilter ? 'is-leader' : '';
+        return `<div class="lb-row ${leader} fade-in" ${click}>
+            <span class="lb-pos ${p.posNum <= 3 ? 'gold' : ''}">${p.pos}</span>
+            <span class="lb-flag">${p.flag}</span>
+            <div class="lb-info">
+                <div class="lb-name">${p.nameHtml}</div>
+                <div class="lb-thru">${p.thru}</div>
+            </div>
+            <span class="lb-score ${p.totCls}">${p.tot}</span>
+            <span class="lb-today ${p.todayCls}">${p.today}</span>
+            ${star}
+        </div>`;
+    }
+}
+
+function applyLbView() {
+    let players = [...lbPlayers];
+
+    // Filter by search
+    if (lbFilter) {
+        const q = lbFilter.toLowerCase();
+        players = players.filter(p => p.name.toLowerCase().includes(q));
+    }
+
+    // Sort
+    players.sort((a, b) => {
+        let va, vb;
+        switch (lbSortCol) {
+            case 'name':  va = a.name;     vb = b.name;     break;
+            case 'tot':   va = a.totRaw;   vb = b.totRaw;   break;
+            case 'today': va = a.todayRaw; vb = b.todayRaw; break;
+            case 'time':  va = a.timeRaw;  vb = b.timeRaw;  break;
+            default:      va = a.posNum;   vb = b.posNum;   break;
+        }
+        if (va === vb) return 0;
+        const cmp = typeof va === 'string' ? va.localeCompare(vb) : (va - vb);
+        return lbSortDir === 'asc' ? cmp : -cmp;
+    });
+
+    let html = '', cutShown = false;
+    players.forEach((p, i) => {
+        if (lbMode === 'live' && p.isCut && !cutShown && !lbFilter) {
+            cutShown = true;
+            html += `<div class="cut-banner"><div class="cut-line"></div><span class="cut-text">CUT</span><div class="cut-line"></div></div>`;
+        }
+        html += buildLbRowHtml(p, i);
+    });
+
+    document.getElementById('lb-rows').innerHTML = html || `<div class="loading-msg">${lbFilter ? 'NO MATCHES' : 'NO DATA'}</div>`;
+    renderLbColHdr();
+    renderFavorites();
+}
+
+function fmtCountdown(ms) {
+    if (ms <= 0) return 'LIVE';
+    const s = Math.floor(ms/1000);
+    const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    if (d > 0) return `${d}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m`;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function windDir(deg) {
+    return ['N','NE','E','SE','S','SW','W','NW'][Math.round(deg/45)%8];
+}
+function weatherIcon(code) {
+    if(code===0)return{icon:'☀️',text:'Clear'};if(code<=2)return{icon:'⛅',text:'Partly Cloudy'};
+    if(code===3)return{icon:'☁️',text:'Overcast'};if(code<=49)return{icon:'🌫️',text:'Foggy'};
+    if(code<=59)return{icon:'🌦️',text:'Drizzle'};if(code<=69)return{icon:'🌧️',text:'Rain'};
+    if(code<=79)return{icon:'❄️',text:'Snow'};if(code<=82)return{icon:'🌦️',text:'Showers'};
+    if(code<=99)return{icon:'⛈️',text:'Thunderstorm'};return{icon:'🌡️',text:'—'};
+}
+
+function parseTeeTime(timeStr, dateStr) {
+    const [t, ap] = timeStr.split(' ');
+    let [h, m] = t.split(':').map(Number);
+    if (ap === 'PM' && h !== 12) h += 12;
+    if (ap === 'AM' && h === 12) h = 0;
+    const d = new Date(`${dateStr}T00:00:00-04:00`);
+    d.setHours(h, m, 0, 0);
+    return d;
+}
+
+function isFeaturedGroup(group) {
+    return group.player.some(p => FEATURED_NAMES.some(n => p.last_name && p.last_name.trim() === n));
+}
+
+// ─── HOLES CHART ─────────────────────────────────────────────
+function renderHoles() {
+    const el = document.getElementById('holes-chart');
+    if (!el) return;
+    el.innerHTML = HOLES.map(([par], i) => `
+        <div class="hole-cell">
+            <div class="hole-num">${i+1}</div>
+            <div class="hole-par ${par===3?'par3':par===5?'par5':''}">${par}</div>
+        </div>`).join('');
+}
+
+// ─── COUNTDOWN ───────────────────────────────────────────────
+function updateCountdown() {
+    const ms = ROUND1_START - new Date();
+    const str = fmtCountdown(ms);
+    document.getElementById('hdr-countdown').textContent = str;
+    document.getElementById('pre-cdown').textContent     = str;
+    const sc = document.getElementById('slate-countdown');
+    if (sc) sc.textContent = ms > 0 ? str : '';
+    if (ms <= 0) {
+        const badge = document.getElementById('status-badge');
+        badge.className = 'status-badge badge-live';
+        badge.innerHTML = '<div class="badge-dot"></div><span>LIVE</span>';
+    }
+}
+
+// ─── STREAM CHANNELS ─────────────────────────────────────────
+async function fetchStreamConfig() {
+    try {
+        const data = await (await fetch(LIVE_VIDEO_URL)).json();
+        streamChannels = data.channels || [];
+    } catch(e) {
+        console.warn('Stream config unavailable (CORS?):', e);
+    }
+    renderChannelTabs();
+    // Default to YouTube tab — always works
+    switchChannel('yt');
+}
+
+function renderChannelTabs() {
+    const el = document.getElementById('channel-tabs');
+    document.getElementById('pre-event-slate').style.display = 'none';
+
+    // YouTube is always first
+    const ytLive = ROUND1_START <= new Date();
+    const ytTab = `
+        <div class="ch-tab ${activeChannelId==='yt'?'active':''}" id="tab-yt" onclick="switchChannel('yt')">
+            <div class="ch-tab-name">YouTube</div>
+            <div class="ch-tab-status ${ytLive?'live':'off'}">${ytLive?'● LIVE':'○ OFF AIR'}</div>
+        </div>`;
+
+    const chTabs = streamChannels.map(ch => {
+        const isLive  = ch.live;
+        const isRadio = ch.type === 'radio';
+        const label   = isLive ? '● LIVE' : isRadio ? '♪ RADIO' : '○ OFF AIR';
+        const cls     = isLive ? 'live'   : isRadio ? 'radio'   : 'off';
+        const name    = ch.name.replace('Masters On the ','On the ').replace('Masters ','');
+        return `
+            <div class="ch-tab ${activeChannelId===ch.channelId?'active':''}"
+                 id="tab-${ch.channelId}" onclick="switchChannel('${ch.channelId}')">
+                <div class="ch-tab-name">${name}</div>
+                <div class="ch-tab-status ${cls}">${label}</div>
+            </div>`;
+    }).join('');
+
+    el.innerHTML = ytTab + chTabs;
+}
+
+function switchChannel(channelId) {
+    activeChannelId = channelId;
+
+    // Update tab active state
+    document.querySelectorAll('.ch-tab').forEach(t => t.classList.remove('active'));
+    const tab = document.getElementById(`tab-${channelId}`);
+    if (tab) tab.classList.add('active');
+
+    // Hide all stream views
+    document.getElementById('pre-event-slate').style.display = 'none';
+    document.getElementById('stream-slate').style.display    = 'none';
+    document.getElementById('stream-video').style.display    = 'none';
+    document.getElementById('yt-iframe').style.display       = 'none';
+    document.getElementById('audio-bar').style.display       = 'none';
+
+    // Stop any existing HLS
+    if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+
+    // YouTube tab
+    if (channelId === 'yt') {
+        const isLive = ROUND1_START <= new Date();
+        if (isLive) {
+            const iframe = document.getElementById('yt-iframe');
+            iframe.style.display = 'block';
+            if (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href) {
+                iframe.src = YT_EMBED;
+            }
+        } else {
+            // Show off-air slate for YouTube pre-tournament
+            const slate = document.getElementById('stream-slate');
+            slate.style.display = 'flex';
+            document.getElementById('slate-img').src = '';
+            document.getElementById('slate-channel-name').textContent = 'Masters on YouTube';
+            document.getElementById('slate-caption').textContent = 'Live stream begins Thursday April 9th';
+        }
+        return;
+    }
+
+    const ch = streamChannels.find(c => c.channelId === channelId);
+    if (!ch) return;
+
+    if (ch.type === 'radio') {
+        // Radio player
+        const bar = document.getElementById('audio-bar');
+        bar.style.display = 'flex';
+        const audio = document.getElementById('radio-audio');
+        const radioStatus = document.getElementById('radio-status');
+        if (ch.live && ch.desktop?.[0]?.url) {
+            radioStatus.textContent = '● LIVE — Masters Radio';
+            audio.style.display = 'block';
+            audio.src = ch.desktop[0].url;
+        } else {
+            radioStatus.textContent = 'OFF AIR — Coverage begins April 9th';
+            audio.style.display = 'none';
+        }
+        return;
+    }
+
+    if (!ch.live) {
+        // Show slate (off air)
+        const slate = document.getElementById('stream-slate');
+        slate.style.display = 'flex';
+        document.getElementById('slate-img').src         = ch.imagePath || '';
+        document.getElementById('slate-channel-name').textContent = ch.name;
+        document.getElementById('slate-caption').textContent      = ch.caption || 'Coverage continues April 9th';
+        return;
+    }
+
+    // Live — play HLS stream
+    const url = ch.desktop?.[0]?.url;
+    if (!url) return;
+
+    const video = document.getElementById('stream-video');
+    video.style.display = 'block';
+
+    if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+        hlsInstance = new Hls({ lowLatencyMode: true });
+        hlsInstance.loadSource(url);
+        hlsInstance.attachMedia(video);
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(()=>{}));
+        hlsInstance.on(Hls.Events.ERROR, (evt, data) => {
+            if (data.fatal) {
+                // Fall back to slate on error
+                video.style.display = 'none';
+                showSlate(ch);
+            }
+        });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari native HLS
+        video.src = url;
+        video.play().catch(()=>{});
+    } else {
+        showSlate(ch);
+    }
+}
+
+function showSlate(ch) {
+    document.getElementById('stream-video').style.display = 'none';
+    const slate = document.getElementById('stream-slate');
+    slate.style.display = 'flex';
+    document.getElementById('slate-img').src = ch.imagePath || '';
+    document.getElementById('slate-channel-name').textContent = ch.name;
+    document.getElementById('slate-caption').textContent = ch.caption || '';
+}
+
+// ─── PAIRINGS / TEE TIMES ────────────────────────────────────
+async function fetchPairings() {
+    try {
+        const data = await (await fetch(PAIRINGS_URL)).json();
+        const round = data.currentRound || '1';
+        const groups = data[`round${round}`]?.group || [];
+        pairingsData = groups;
+        renderTimeline();
+        renderFeaturedGroups();
+        // If leaderboard is already showing empty state, upgrade it to field view
+        if (document.getElementById('lb-round-tag').textContent === '' ||
+            document.getElementById('lb-rows').querySelector('.lb-empty')) {
+            showLbEmpty();
+        }
+    } catch(e) {
+        // CORS fallback — use hardcoded key groups
+        pairingsData = FALLBACK_GROUPS;
+        renderTimeline();
+        renderFeaturedGroups();
+        if (document.getElementById('lb-rows').querySelector('.lb-empty')) {
+            showLbEmpty();
+        }
+    }
+}
+
+// Fallback if CORS blocks pairings.json
+const FALLBACK_GROUPS = [
+    { time:'10:07 AM', tee:'1', player:[{first_name:'Bryson',last_name:'DeChambeau',country:'USA'},{first_name:'Matt',last_name:'Fitzpatrick',country:'ENG'},{first_name:'Xander',last_name:'Schauffele',country:'USA'}] },
+    { time:'10:19 AM', tee:'1', player:[{first_name:'Hideki',last_name:'Matsuyama',country:'JPN'},{first_name:'Collin',last_name:'Morikawa',country:'USA'},{first_name:'Russell',last_name:'Henley',country:'USA'}] },
+    { time:'10:31 AM', tee:'1', player:[{first_name:'Rory',last_name:'McIlroy',country:'NIR'},{first_name:'Cameron',last_name:'Young',country:'USA'},{first_name:'Mason',last_name:'Howell',country:'USA'}] },
+    { time:'10:43 AM', tee:'1', player:[{first_name:'Viktor',last_name:'Hovland',country:'NOR'},{first_name:'Patrick',last_name:'Cantlay',country:'USA'},{first_name:'Alex',last_name:'Noren',country:'SWE'}] },
+    { time:'1:08 PM',  tee:'1', player:[{first_name:'Jon',last_name:'Rahm',country:'ESP'},{first_name:'Chris',last_name:'Gotterup',country:'USA'},{first_name:'Ludvig',last_name:'Åberg',country:'SWE'}] },
+    { time:'1:20 PM',  tee:'1', player:[{first_name:'Jordan',last_name:'Spieth',country:'USA'},{first_name:'Justin',last_name:'Rose',country:'ENG'},{first_name:'Brooks',last_name:'Koepka',country:'USA'}] },
+    { time:'1:32 PM',  tee:'1', player:[{first_name:'Sepp',last_name:'Straka',country:'AUT'},{first_name:'Ben',last_name:'Griffin',country:'USA'},{first_name:'Justin',last_name:'Thomas',country:'USA'}] },
+    { time:'1:44 PM',  tee:'1', player:[{first_name:'Scottie',last_name:'Scheffler',country:'USA'},{first_name:'Robert',last_name:'MacIntyre',country:'SCO'},{first_name:'Gary',last_name:'Woodland',country:'USA'}] },
+];
+
+function renderTimeline() {
+    const now = new Date();
+    const groups = pairingsData.length ? pairingsData : FALLBACK_GROUPS;
+    let html = '';
+    groups.forEach(g => {
+        const t    = parseTeeTime(g.time, '2026-04-09');
+        const past = t < now && (now - t) > 5*3600000;
+        const onCourse = t <= now && !past;
+        const feat = isFeaturedGroup(g);
+        const names = (g.player || []).filter(p => p.last_name).map(p => p.last_name.trim()).join(' · ');
+        html += `
+            <div class="tee-card ${feat?'featured':''} ${onCourse?'on-course':''} ${past?'past':''}">
+                <div>
+                    <div class="tee-time">${g.time}</div>
+                    <div class="tee-players">${names}${feat?' ★':''}</div>
+                </div>
+                <div class="tee-hole">H${g.tee||1}</div>
+            </div>`;
+    });
+    document.getElementById('tl-track').innerHTML = html || '<div class="loading-msg" style="padding:8px 14px">NO DATA</div>';
+}
+
+function renderFeaturedGroups() {
+    const groups = pairingsData.length ? pairingsData : FALLBACK_GROUPS;
+    const featured = groups.filter(g => isFeaturedGroup(g));
+    if (!featured.length) { document.getElementById('fg-list').innerHTML = '<div class="loading-msg">LOADING...</div>'; return; }
+    document.getElementById('fg-list').innerHTML = featured.map(g => `
+        <div class="fg-row">
+            <div class="fg-time">${g.time}</div>
+            <div class="fg-info">
+                <div class="fg-players">${(g.player||[]).filter(p=>p.first_name).map(p=>`${flagEmoji(p.country)} ${p.first_name} ${p.last_name?.trim()}`).join('<br>')}</div>
+                <div class="fg-hole">Hole ${g.tee||1} · Round 1 · Apr 9</div>
+            </div>
+            <div class="fg-badge">FEATURED</div>
+        </div>`).join('');
+}
+
+// ─── WEATHER ─────────────────────────────────────────────────
+async function fetchWeather() {
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${AUGUSTA_LAT}&longitude=${AUGUSTA_LON}`
+            + `&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m`
+            + `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,weather_code`
+            + `&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FNew_York&forecast_days=4`;
+        const data = await (await fetch(url)).json();
+        const cur = data.current, day = data.daily;
+        const wi = weatherIcon(cur.weather_code);
+        const wd = windDir(cur.wind_direction_10m);
+        document.getElementById('hdr-temp').textContent = `${Math.round(cur.temperature_2m)}°F ${wi.icon}`;
+        document.getElementById('hdr-wind').textContent = `${Math.round(cur.wind_speed_10m)}mph ${wd}`;
+        const rounds = ['PRACTICE','R1 THU','R2 FRI','R3 SAT'];
+        const fcHtml = Array.from({length:Math.min(4,day.time.length)},(_,i)=>{
+            const w = weatherIcon(day.weather_code[i]);
+            return `<div class="fc-day"><div class="fc-name">${rounds[i]||day.time[i]}</div><div class="fc-icon">${w.icon}</div><div class="fc-hi">${Math.round(day.temperature_2m_max[i])}°</div><div class="fc-lo">${Math.round(day.temperature_2m_min[i])}°</div><div class="fc-round">${day.precipitation_probability_max[i]}% rain</div></div>`;
+        }).join('');
+        document.getElementById('weather-body').innerHTML = `
+            <div class="weather-grid">
+                <div>
+                    <div class="w-temp">${Math.round(cur.temperature_2m)}°F</div>
+                    <div style="font-size:22px;margin:2px 0">${wi.icon}</div>
+                    <div class="w-desc">${wi.text}</div>
+                    <div class="w-loc">Augusta, GA · ANGC</div>
+                </div>
+                <div class="w-stats">
+                    <div class="w-row"><span class="w-lbl">Feels Like</span><span class="w-val">${Math.round(cur.apparent_temperature)}°F</span></div>
+                    <div class="w-row"><span class="w-lbl">Wind</span><span class="w-val">${Math.round(cur.wind_speed_10m)} mph ${wd}</span></div>
+                    <div class="w-row"><span class="w-lbl">Humidity</span><span class="w-val">${cur.relative_humidity_2m}%</span></div>
+                </div>
+            </div>
+            <div class="forecast-row">${fcHtml}</div>`;
+        document.getElementById('weather-updated').textContent = 'LIVE';
+    } catch(e) {
+        document.getElementById('weather-body').innerHTML = '<div class="loading-msg">UNAVAILABLE</div>';
+    }
+}
+
+// ─── LEADERBOARD (masters.com scores.json) ───────────────────
+async function fetchLeaderboard() {
+    try {
+        const data = await (await fetch(SCORES_URL)).json();
+        const d = data.data;
+        if (!d) { showLbEmpty(); return; }
+        scoresData = d; // cache for player card lookups
+
+        const round = parseInt(d.currentRound);
+        const statusRound = d.statusRound || 'NNNN'; // e.g. "FNNN", "PFNN"
+        const roundStatus = statusRound[Math.max(0, round-1)] || 'N'; // N=not started, P=in progress, F=finished
+
+        // Pre-tournament: currentRound=1000 or all N
+        const preEvent = round >= 1000 || statusRound === 'NNNN';
+        if (preEvent) { showLbEmpty(); return; }
+
+        const players = (d.player || []).filter(p => p.status !== 'X' && p.pos !== '');
+        if (!players.length) { showLbEmpty(); return; }
+
+        // Sort by sort_order (masters.com already provides this)
+        players.sort((a,b) => {
+            const aPos = parseFloat(a.sort_order) || 999;
+            const bPos = parseFloat(b.sort_order) || 999;
+            return aPos - bPos;
+        });
+
+        const roundLabel = roundStatus === 'P' ? 'IN PROGRESS' : roundStatus === 'F' ? 'COMPLETE' : `R${round}`;
+        document.getElementById('hdr-round').textContent    = `R${round}`;
+        document.getElementById('lb-round-tag').textContent = roundLabel;
+
+        const leader = players[0];
+        if (leader) {
+            document.getElementById('hdr-leader').textContent = leader.display_name2 || leader.last_name || '—';
+            document.getElementById('hdr-score').textContent  = fmtMastersScore(leader.topar);
+        }
+
+        lbMode = 'live';
+        lbPlayers = players.map(p => {
+            const name  = p.full_name || p.display_name2 || '—';
+            const champ = p.past ? ' <span style="color:var(--gold);font-size:9px">★</span>' : '';
+            return {
+                id: p.id, name,
+                flag: flagEmoji(p.countryCode || ''),
+                pos: p.pos || '—',
+                posNum: parseFloat(p.sort_order) || 999,
+                tot: fmtMastersScore(p.topar),   totRaw: scoreToNum(p.topar),   totCls: mastersScoreCls(p.topar),
+                today: fmtMastersScore(p.today), todayRaw: scoreToNum(p.today), todayCls: mastersScoreCls(p.today),
+                thru: p.thru ? (p.thru === '18' ? 'F' : `thru ${p.thru}`) : '',
+                isCut: p.status === 'C' || p.status === 'MC',
+                nameHtml: name + champ,
+                time: '', timeRaw: 0, country: '',
+            };
+        });
+        applyLbView();
+
+    } catch(e) {
+        // Fall back to ESPN if masters.com scores blocked
+        fetchLeaderboardESPN();
+    }
+}
+
+function fmtMastersScore(raw) {
+    if (raw == null || raw === '' || raw === undefined) return '—';
+    const s = String(raw).trim();
+    if (!s || s === 'E' || s === '0') return 'E';
+    const n = parseInt(s);
+    if (isNaN(n)) return s;
+    if (n === 0) return 'E';
+    return n > 0 ? `+${n}` : `${n}`;
+}
+function mastersScoreCls(raw) {
+    if (!raw && raw !== 0) return '';
+    const n = parseInt(raw);
+    return isNaN(n)||n===0 ? 'even' : n<0 ? 'under' : 'over';
+}
+
+async function fetchLeaderboardESPN() {
+    try {
+        const data = await (await fetch('https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?league=pga')).json();
+        const evt = (data.events||[]).find(e=>(e.name||'').toLowerCase().includes('masters')) || data.events?.[0];
+        if (!evt) { showLbEmpty(); return; }
+        const competitors = (evt.competitions?.[0]?.competitors||[])
+            .slice().sort((a,b)=>(parseInt(a.status?.position?.id)||999)-(parseInt(b.status?.position?.id)||999));
+        const allScheduled = competitors.every(p=>!p.status?.type?.name||p.status.type.name==='STATUS_SCHEDULED');
+        if (allScheduled || !competitors.length) { showLbEmpty(); return; }
+        const round = evt.status?.period || 1;
+        document.getElementById('hdr-round').textContent = `R${round}`;
+        lbMode = 'espn';
+        lbPlayers = competitors.slice(0,70).map((p,i) => {
+            const name   = p.athlete?.displayName || '?';
+            const espnId = String(p.athlete?.id || i);
+            return {
+                id: espnId, name,
+                flag: flagEmoji(p.athlete?.flag?.alt || p.athlete?.country || ''),
+                pos: String(p.status?.position?.displayName || i+1),
+                posNum: parseInt(p.status?.position?.id) || i+1,
+                tot: fmtScore(p.score),                           totRaw: scoreToNum(p.score),    totCls: scoreCls(p.score),
+                today: fmtScore(p.linescores?.[round-1]?.displayValue), todayRaw: scoreToNum(p.linescores?.[round-1]?.displayValue),
+                todayCls: scoreCls(p.linescores?.[round-1]?.displayValue),
+                thru: p.status?.thru ? `thru ${p.status.thru}` : (p.status?.type?.shortDetail || ''),
+                isCut: false, nameHtml: name,
+                time: '', timeRaw: 0, country: '',
+            };
+        });
+        applyLbView();
+    } catch(e) { showLbEmpty(); }
+}
+function showLbEmpty() {
+    document.getElementById('hdr-leader').textContent = 'Apr 9–12';
+    // If we have pairings, show the field instead of a blank state
+    if (pairingsData.length) {
+        renderField();
+    } else {
+        document.getElementById('lb-rows').innerHTML = `<div class="lb-empty"><div class="lb-empty-title">The Masters</div><div class="lb-empty-sub">LEADERBOARD AVAILABLE</div><div class="lb-empty-sub">THURSDAY APRIL 9 · 7:40 AM EDT</div></div>`;
+    }
+}
+
+function renderField() {
+    document.getElementById('lb-round-tag').textContent = 'FIELD';
+    lbMode = 'field';
+    lbPlayers = [];
+    let rowNum = 0;
+    pairingsData.forEach(g => {
+        const timeRaw = parseTimeToMins(g.time);
+        (g.player || []).filter(p => p.first_name || p.last_name).forEach(p => {
+            rowNum++;
+            const name      = `${p.first_name || ''} ${(p.last_name || '').trim()}`.trim();
+            const pastChamp = p.past_champion ? ' <span style="color:var(--gold);font-size:9px">★</span>' : '';
+            const amateur   = p.amateur ? ' <span style="color:var(--text-muted);font-size:8px">(A)</span>' : '';
+            const pid       = scoresData?.player?.find(sp =>
+                sp.last_name?.trim() === (p.last_name||'').trim() && sp.first_name === p.first_name
+            )?.id || p.id || '';
+            lbPlayers.push({
+                id: pid, name, flag: flagEmoji(p.country || ''),
+                pos: String(rowNum), posNum: rowNum,
+                tot: '', totRaw: 0, totCls: '',
+                today: '', todayRaw: 0, todayCls: '',
+                thru: '', isCut: false,
+                nameHtml: name + pastChamp + amateur,
+                time: g.time, timeRaw,
+                country: p.country_long || p.country || '',
+            });
+        });
+    });
+    applyLbView();
+}
+
+// ─── NEWS ─────────────────────────────────────────────────────
+async function fetchNews() {
+    try {
+        const data = await (await fetch('https://site.api.espn.com/apis/site/v2/sports/golf/news?limit=20')).json();
+        const arts = data.articles || [];
+        document.getElementById('news-count').textContent = `${arts.length} STORIES`;
+        document.getElementById('news-list').innerHTML = arts.map(a=>`
+            <div class="news-card fade-in" onclick="window.open('${a.links?.web?.href||'#'}','_blank')">
+                <div class="news-src">ESPN Golf</div>
+                <div class="news-hl">${a.headline||a.title||''}</div>
+                ${a.description?`<div class="news-desc">${a.description.slice(0,130)}${a.description.length>130?'…':''}</div>`:''}
+                <div class="news-time">${a.published?timeAgo(new Date(a.published)):''}</div>
+            </div>`).join('') || '<div class="loading-msg">NO STORIES</div>';
+    } catch(e) { document.getElementById('news-list').innerHTML = '<div class="loading-msg">NEWS UNAVAILABLE</div>'; }
+}
+
+// ─── AUTO REFRESH ─────────────────────────────────────────────
+let rfSecs=60, rfInt;
+function startRefresh() {
+    rfSecs=60; clearInterval(rfInt);
+    rfInt = setInterval(()=>{
+        rfSecs--;
+        const el=document.getElementById('rf-timer'); if(el) el.textContent=rfSecs;
+        if (rfSecs<=0) {
+            fetchLeaderboard(); fetchWeather(); fetchNews();
+            fetchStreamConfig(); // re-check live status
+            renderTimeline();
+            rfSecs=60;
+        }
+    },1000);
+}
+
+// ─── FAVORITES ────────────────────────────────────────────────
+let favorites = new Set(JSON.parse(localStorage.getItem('masters_favs') || '[]'));
+let favPanelOpen = true;
+
+function saveFavorites() {
+    localStorage.setItem('masters_favs', JSON.stringify([...favorites]));
+}
+
+function toggleFavorite(pid, event) {
+    if (event) event.stopPropagation();
+    if (favorites.has(pid)) {
+        favorites.delete(pid);
+    } else {
+        favorites.add(pid);
+        // Auto-open panel when first fav added
+        if (!favPanelOpen) toggleFavPanel();
+    }
+    saveFavorites();
+    renderFavorites();
+    // Update star icons in leaderboard without full re-render
+    document.querySelectorAll('.lb-star').forEach(el => {
+        if (el.dataset.pid === pid) {
+            el.textContent = favorites.has(pid) ? '★' : '☆';
+            el.classList.toggle('fav', favorites.has(pid));
+        }
+    });
+}
+
+function toggleFavPanel() {
+    favPanelOpen = !favPanelOpen;
+    document.getElementById('fav-rows').classList.toggle('collapsed', !favPanelOpen);
+    document.getElementById('fav-toggle').classList.toggle('collapsed', !favPanelOpen);
+}
+
+function renderFavorites() {
+    const count = favorites.size;
+    document.getElementById('fav-count').textContent = `${count} player${count !== 1 ? 's' : ''}`;
+
+    if (count === 0) {
+        document.getElementById('fav-rows').innerHTML =
+            `<div class="fav-empty">☆ Star any player below to track them here</div>`;
+        return;
+    }
+
+    // Build lookup from scoresData or pairingsData
+    const playerMap = {};
+    if (scoresData?.player) {
+        scoresData.player.forEach(p => { playerMap[p.id] = p; });
+    } else {
+        // Pre-tournament: build from pairings
+        pairingsData.forEach(g => {
+            (g.player || []).forEach(p => {
+                if (p.id) playerMap[p.id] = { ...p, teetime: g.time };
+            });
+        });
+    }
+
+    const round = Math.min(Math.max(parseInt(scoresData?.currentRound) || 1, 1), 4);
+    const preEvent = !scoresData || parseInt(scoresData.currentRound) >= 1000;
+
+    let html = '';
+    favorites.forEach(pid => {
+        const p = playerMap[pid];
+        if (!p) return;
+
+        const flag    = flagEmoji(p.countryCode || p.country || '');
+        const name    = p.full_name || p.display_name2 || `${p.first_name||''} ${(p.last_name||'').trim()}`.trim();
+        const pos     = p.pos || '—';
+        const topar   = preEvent ? '—' : fmtMastersScore(p.topar);
+        const totCls  = preEvent ? '' : mastersScoreCls(p.topar);
+        const today   = preEvent ? p.teetime || '—' : fmtMastersScore(p.today);
+        const todayCls= preEvent ? '' : mastersScoreCls(p.today);
+        const thru    = p.thru ? (p.thru === '18' ? 'F' : `T${p.thru}`) : (preEvent ? '' : '');
+
+        html += `
+            <div class="fav-row" onclick="showPlayerCard('${pid}')">
+                <span class="lb-pos" style="color:var(--text-muted)">${pos}</span>
+                <span class="lb-flag">${flag}</span>
+                <div class="lb-info">
+                    <div class="lb-name">${name}${p.past ? ' <span style="color:var(--gold);font-size:9px">★</span>' : ''}</div>
+                    <div class="lb-thru">${thru}</div>
+                </div>
+                <span class="lb-score ${totCls}">${topar}</span>
+                <span class="lb-today ${todayCls}">${today}</span>
+                <span class="lb-star fav" data-pid="${pid}"
+                      onclick="toggleFavorite('${pid}', event)">★</span>
+            </div>`;
+    });
+
+    document.getElementById('fav-rows').innerHTML = html ||
+        `<div class="fav-empty">No data yet for favorited players</div>`;
+}
+
+// ─── PLAYER CARD ──────────────────────────────────────────────
+const PARS = [4,5,4,3,4,3,4,5,4, 4,4,3,5,4,5,3,4,4];
+const HOLE_NAMES = ['','Tea Olive','Pink Dogwood','Flowering Peach','Flowering Crab Apple','Magnolia',
+    'Juniper','Pampas','Yellow Jasmine','Carolina Cherry',
+    'Camellia','White Dogwood','Golden Bell','Azalea','Chinese Fir',
+    'Firethorn','Redbud','Nandina','Holly'];
+
+function showPlayerCard(pid) {
+    // Look up in scoresData first, fall back to pairings
+    let p = scoresData?.player?.find(pl => pl.id === pid);
+    if (!p) {
+        // Try to build basic card from pairings
+        for (const g of pairingsData) {
+            const found = (g.player||[]).find(pl => pl.id === pid);
+            if (found) { p = { ...found, teetime: g.time, round1:{scores:Array(18).fill(null),roundStatus:'Pre'} }; break; }
+        }
+    }
+    if (!p) return;
+
+    // Photo
+    const photoWrap = document.getElementById('pm-photo-wrap');
+    if (p.image) {
+        photoWrap.innerHTML = `<img class="pm-photo" src="https://images.masters.com/players/2026/240x240/${p.id}.jpg"
+            onerror="this.outerHTML='<div class=pm-photo-placeholder>⛳</div>'" alt="${p.full_name||p.first_name}">`;
+    } else {
+        photoWrap.innerHTML = `<div class="pm-photo-placeholder">⛳</div>`;
+    }
+
+    // Identity
+    document.getElementById('pm-name').textContent = p.full_name || `${p.first_name||''} ${(p.last_name||'').trim()}`.trim();
+    document.getElementById('pm-country').innerHTML = `${flagEmoji(p.countryCode||'')} ${p.countryName||p.countryCode||''}`;
+
+    const badges = [];
+    if (p.past)        badges.push(`<span class="pm-badge champ">★ PAST CHAMPION</span>`);
+    if (p.amateur)     badges.push(`<span class="pm-badge amateur">AMATEUR</span>`);
+    if (p.firsttimer)  badges.push(`<span class="pm-badge first">FIRST MASTERS</span>`);
+    document.getElementById('pm-badges').innerHTML = badges.join('');
+
+    // Score summary
+    const toparEl = document.getElementById('pm-topar');
+    const topar = fmtMastersScore(p.topar);
+    toparEl.textContent  = topar;
+    toparEl.className    = 'pm-topar ' + mastersScoreCls(p.topar);
+    document.getElementById('pm-pos').textContent     = p.pos ? `Position: ${p.pos}` : '';
+    document.getElementById('pm-teetime').textContent = `R1 Tee: ${p.teetime||'—'}`;
+
+    // Scorecard
+    const round = parseInt(scoresData?.currentRound) || 1;
+    const activeRound = Math.min(Math.max(round >= 1000 ? 1 : round, 1), 4);
+    buildScorecard(p, activeRound);
+
+    // Links
+    document.getElementById('pm-links').innerHTML = `
+        <a class="pm-link" href="https://www.masters.com/en_US/players/player_${p.id}.html" target="_blank">MASTERS.COM PROFILE</a>
+        <a class="pm-link" href="https://www.masters.com/en_US/players/pairings/index.html" target="_blank">TEE TIMES</a>`;
+
+    currentModalPid = pid;
+    updateModalFavBtn(pid);
+    document.getElementById('player-modal').classList.add('open');
+}
+
+let currentModalPid = '';
+
+function updateModalFavBtn(pid) {
+    const btn = document.getElementById('pm-fav-btn');
+    if (!btn) return;
+    const isFav = favorites.has(pid);
+    btn.textContent = isFav ? '★ Remove from Favorites' : '☆ Add to Favorites';
+    btn.classList.toggle('is-fav', isFav);
+}
+
+function toggleModalFav() {
+    if (!currentModalPid) return;
+    toggleFavorite(currentModalPid, null);
+    updateModalFavBtn(currentModalPid);
+}
+
+function buildScorecard(p, activeRound) {
+    const scTitle = document.getElementById('pm-sc-title');
+    const scWrap  = document.getElementById('pm-scorecard');
+    const preEvent = !scoresData || parseInt(scoresData.currentRound) >= 1000;
+
+    if (preEvent) {
+        scTitle.textContent = 'ROUND 1 SCORECARD — Not yet started';
+        scWrap.innerHTML = `<div style="padding:16px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:2px">ROUND 1 BEGINS THURSDAY APRIL 9 · 7:40 AM EDT</div>`;
+        return;
+    }
+
+    // Show scores for each available round
+    let html = '';
+    for (let r = 1; r <= 4; r++) {
+        const rd = p[`round${r}`];
+        if (!rd || rd.roundStatus === 'Pre') continue;
+        const scores = rd.scores || [];
+        const pars   = (scoresData?.pars?.[`round${r}`]) || PARS;
+        scTitle.textContent = `SCORECARD`;
+
+        // Front 9
+        const front = scores.slice(0,9);
+        const back  = scores.slice(9,18);
+        const frontPars = pars.slice(0,9);
+        const backPars  = pars.slice(9,18);
+        const frontTotal = front.reduce((s,v) => s + (v||0), 0);
+        const backTotal  = back.reduce((s,v)  => s + (v||0), 0);
+        const frontPar   = frontPars.reduce((s,v) => s+v, 0);
+        const backPar    = backPars.reduce((s,v)  => s+v, 0);
+        const rdTotal    = rd.total || (frontTotal + backTotal) || null;
+
+        html += `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold);letter-spacing:2px;padding:8px 4px 4px">ROUND ${r}${rd.roundStatus==='Active'?' · IN PROGRESS':rd.roundStatus==='Complete'?' · COMPLETE':''}</div>`;
+        html += `<table class="sc-table">
+            <thead><tr>
+                <th class="sc-label">HOLE</th>
+                ${Array.from({length:9},(_,i)=>`<th>${i+1}</th>`).join('')}
+                <th style="color:var(--gold)">OUT</th>
+                ${Array.from({length:9},(_,i)=>`<th>${i+10}</th>`).join('')}
+                <th style="color:var(--gold)">IN</th>
+                <th style="color:var(--gold)">TOT</th>
+            </tr></thead>
+            <tbody>
+                <tr>
+                    <td class="sc-label sc-par">PAR</td>
+                    ${frontPars.map(p=>`<td class="sc-par">${p}</td>`).join('')}
+                    <td class="sc-total">${frontPar}</td>
+                    ${backPars.map(p=>`<td class="sc-par">${p}</td>`).join('')}
+                    <td class="sc-total">${backPar}</td>
+                    <td class="sc-sum">${frontPar+backPar}</td>
+                </tr>
+                <tr>
+                    <td class="sc-label">SCORE</td>
+                    ${front.map((s,i)=>holeScoreCell(s,frontPars[i])).join('')}
+                    <td class="sc-total">${frontTotal||'—'}</td>
+                    ${back.map((s,i)=>holeScoreCell(s,backPars[i])).join('')}
+                    <td class="sc-total">${backTotal||'—'}</td>
+                    <td class="sc-sum">${rdTotal||'—'}</td>
+                </tr>
+            </tbody>
+        </table>`;
+    }
+
+    if (!html) {
+        html = `<div style="padding:16px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:2px">NO ROUND DATA YET</div>`;
+    }
+    scWrap.innerHTML = html;
+}
+
+function holeScoreCell(score, par) {
+    if (score == null || score === 0) return `<td class="sc-empty">·</td>`;
+    const diff = score - par;
+    let cls = 'sc-par-s';
+    let display = score;
+    if      (diff <= -2) { cls = 'sc-eagle';  display = `◉${score}`; }
+    else if (diff === -1) { cls = 'sc-birdie'; display = `○${score}`; }
+    else if (diff === 1)  { cls = 'sc-bogey';  display = `□${score}`; }
+    else if (diff >= 2)   { cls = 'sc-double'; display = `■${score}`; }
+    return `<td class="${cls}">${display}</td>`;
+}
+
+function closePlayerCard() {
+    document.getElementById('player-modal').classList.remove('open');
+}
+
+// Close on Escape key
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePlayerCard(); });
+
+// ─── LEADERBOARD RESIZE ───────────────────────────────────────
+function initResizeHandle() {
+    const handle  = document.getElementById('lb-resize-handle');
+    const mainEl  = document.getElementById('main');
+    const lbCol   = document.getElementById('lb-col');
+    if (!handle || !mainEl || !lbCol) return;
+
+    function positionHandle() {
+        const w = lbCol.offsetWidth;
+        handle.style.left   = (w - 2) + 'px';
+        handle.style.height = mainEl.offsetHeight + 'px';
+    }
+    positionHandle();
+    window.addEventListener('resize', positionHandle);
+
+    let startX, startW;
+    handle.addEventListener('mousedown', e => {
+        startX = e.clientX;
+        startW = lbCol.offsetWidth;
+        handle.classList.add('dragging');
+        document.body.style.cursor    = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        function onMove(e) {
+            const newW = Math.max(180, Math.min(480, startW + (e.clientX - startX)));
+            mainEl.style.gridTemplateColumns = `${newW}px 1fr 292px`;
+            positionHandle();
+        }
+        function onUp() {
+            handle.classList.remove('dragging');
+            document.body.style.cursor    = '';
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup',   onUp);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup',   onUp);
+        e.preventDefault();
+    });
+}
+
+// ─── TIMELINE DRAG-SCROLL ─────────────────────────────────────
+function initTimelineScroll() {
+    const track = document.getElementById('tl-track');
+    if (!track) return;
+
+    // Scroll wheel → horizontal scroll
+    track.addEventListener('wheel', e => {
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+            track.scrollLeft += e.deltaY * 1.2;
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    // Click-drag panning
+    let dragging = false, dragStartX = 0, scrollStart = 0;
+    track.addEventListener('mousedown', e => {
+        dragging    = true;
+        dragStartX  = e.clientX;
+        scrollStart = track.scrollLeft;
+        track.style.cursor = 'grabbing';
+        e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        track.scrollLeft = scrollStart - (e.clientX - dragStartX);
+    });
+    document.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        track.style.cursor = 'grab';
+    });
+    track.style.cursor = 'grab';
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+function init() {
+    renderHoles();
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+
+    initResizeHandle();
+    initTimelineScroll();
+
+    // Load data in parallel
+    Promise.all([
+        fetchStreamConfig(),
+        fetchPairings(),
+        fetchWeather(),
+        fetchLeaderboard(),
+        fetchNews(),
+    ]);
+    startRefresh();
+}
+
+init();
+</script>
+</body>
+</html>
