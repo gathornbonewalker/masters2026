@@ -256,12 +256,6 @@
         .mv-slot-slate { display:flex; flex-direction:column; align-items:center; justify-content:center; position:absolute; inset:0; background:radial-gradient(ellipse at center, #0d2014 0%, #060a07 70%); gap:6px; }
         .mv-slot-slate-name { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); letter-spacing:1.5px; }
         .mv-slot-slate-status { font-family:'JetBrains Mono',monospace; font-size:7px; color:var(--text-muted); letter-spacing:1px; }
-        .mv-yt-input { position:absolute; bottom:0; left:0; right:0; z-index:6; display:flex; gap:4px; padding:8px; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); }
-        .mv-yt-input input { flex:1; font-family:'JetBrains Mono',monospace; font-size:10px; padding:6px 8px; background:rgba(255,255,255,0.08); color:#ccc; border:1px solid rgba(255,255,255,0.2); border-radius:3px; outline:none; }
-        .mv-yt-input input:focus { border-color:var(--green); }
-        .mv-yt-input input::placeholder { color:rgba(255,255,255,0.3); }
-        .mv-yt-input button { font-family:'JetBrains Mono',monospace; font-size:9px; padding:6px 12px; background:rgba(0,103,71,0.4); color:var(--green-bright); border:1px solid var(--green); border-radius:3px; cursor:pointer; letter-spacing:1px; }
-        .mv-yt-input button:hover { background:rgba(0,103,71,0.6); }
 
         /* Slate (off air) */
         .stream-slate {
@@ -1007,9 +1001,6 @@ const LIVE_VIDEO_URL = 'https://www.masters.com/en_US/cms/feeds/live/liveVideo.j
 const PAIRINGS_URL   = 'https://www.masters.com/en_US/scores/feeds/2026/pairings.json';
 const SCORES_URL     = 'https://www.masters.com/en_US/scores/feeds/2026/scores.json';
 
-// YouTube — Masters official channel live stream embed
-const YT_EMBED = 'https://www.youtube.com/embed/live_stream?channel=UCsx_MAAT23VOBMXE0Zyh5mg&autoplay=1&mute=0';
-
 // Augusta hole data [par, yards]
 const HOLES = [
     [4,445],[5,575],[4,350],[3,240],[4,455],[3,180],[4,450],[5,570],[4,460],
@@ -1406,8 +1397,6 @@ function buildChannelOptions(selectedId) {
         const live = ch.live ? ' ● LIVE' : '';
         return `<option value="${ch.channelId}" ${ch.channelId===selectedId?'selected':''}>${name}${live}</option>`;
     }).join('');
-    // Add YouTube and TSN options
-    opts += `<option value="__tsn__" ${'__tsn__'===selectedId?'selected':''}>🇨🇦 TSN (Canada)</option>`;
     return opts;
 }
 
@@ -1434,41 +1423,6 @@ function playInSlot(slotIdx, channelId) {
     // Destroy existing HLS for this slot
     if (slotHls[slotIdx]) { slotHls[slotIdx].destroy(); delete slotHls[slotIdx]; }
     container.innerHTML = '';
-
-    // YouTube custom URL
-    if (channelId === '__youtube__') {
-        const savedUrl = localStorage.getItem(`masters_yt_${slotIdx}`) || '';
-        const ytId = extractYouTubeId(savedUrl);
-        let html = '';
-        if (ytId) {
-            html = `<iframe src="https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&mute=${viewMode>1?1:0}"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen style="width:100%;height:100%;border:none;"></iframe>`;
-        } else {
-            html = slotSlateHtml('YouTube', 'Paste a URL below');
-        }
-        html += `<div class="mv-yt-input">
-            <input type="text" id="yt-url-${slotIdx}" placeholder="Paste YouTube URL here..." value="${savedUrl.replace(/"/g,'&quot;')}"
-                   onkeydown="if(event.key==='Enter')loadYouTube(${slotIdx})">
-            <button onclick="loadYouTube(${slotIdx})">LOAD</button>
-            ${ytId ? `<a href="${savedUrl}" target="_blank" title="Open on YouTube"
-                style="display:flex;align-items:center;padding:4px 8px;color:#f88;font-size:12px;text-decoration:none;">↗</a>` : ''}
-        </div>`;
-        container.innerHTML = html;
-        return;
-    }
-
-    // TSN (Canada) — iframe embed
-    if (channelId === '__tsn__') {
-        container.innerHTML = `<div class="mv-slot-slate" style="gap:12px;">
-            <div style="font-size:28px;">🇨🇦</div>
-            <div class="mv-slot-slate-name" style="font-size:11px;">TSN — Masters Coverage</div>
-            <div class="mv-slot-slate-status" style="max-width:80%;text-align:center;line-height:1.6;font-size:8px;">Canadian cable/streaming login required</div>
-            <button onclick="window.open('https://www.tsn.ca/live/?id=418990','tsn_masters','width=1100,height=700,toolbar=0,menubar=0')"
-               style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;padding:8px 20px;background:rgba(0,103,71,0.4);color:var(--green-bright);border:1px solid var(--green);border-radius:4px;cursor:pointer;letter-spacing:1px;">OPEN TSN STREAM</button>
-        </div>`;
-        return;
-    }
 
     const ch = streamChannels.find(c => c.channelId === channelId);
     if (!ch) {
@@ -1513,27 +1467,6 @@ function playInSlot(slotIdx, channelId) {
     } else {
         container.innerHTML = slotSlateHtml(ch.name, 'HLS not supported');
     }
-}
-
-function extractYouTubeId(url) {
-    if (!url) return null;
-    // Handle youtube.com/watch?v=, youtu.be/, youtube.com/embed/, youtube.com/live/
-    const patterns = [
-        /(?:youtube\.com\/watch\?.*v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/,
-    ];
-    for (const p of patterns) {
-        const m = url.match(p);
-        if (m) return m[1];
-    }
-    return null;
-}
-
-function loadYouTube(slotIdx) {
-    const input = document.getElementById(`yt-url-${slotIdx}`);
-    if (!input) return;
-    const url = input.value.trim();
-    localStorage.setItem(`masters_yt_${slotIdx}`, url);
-    playInSlot(slotIdx, '__youtube__');
 }
 
 function slotSlateHtml(name, caption) {
