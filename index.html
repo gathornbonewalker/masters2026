@@ -1894,7 +1894,7 @@ function renderHoleDifficulty() {
     const bGap = cW / 18;
     const bW   = Math.max(3, Math.floor(bGap * 0.72));
 
-    let bars = '', holeLabels = '', valueLabels = '';
+    let bars = '', holeLabels = '', valueLabels = '', hitAreas = '';
 
     avgs.forEach((avg, i) => {
         const cx = pL + (i + 0.5) * bGap;
@@ -1902,6 +1902,7 @@ function renderHoleDifficulty() {
 
         if (avg === null) {
             bars += `<rect x="${x.toFixed(1)}" y="${(mid - 1).toFixed(1)}" width="${bW}" height="2" fill="rgba(255,255,255,0.08)" rx="1"/>`;
+            hitAreas += `<rect x="${(cx - bGap/2).toFixed(1)}" y="${pT}" width="${bGap.toFixed(1)}" height="${cH}" fill="transparent" style="cursor:pointer"><title>Hole ${i+1} · Par ${pars[i]} · No data yet</title></rect>`;
         } else {
             const norm = Math.max(-1, Math.min(1, avg / absMax));
             const bH   = Math.max(3, Math.abs(norm) * cH / 2);
@@ -1915,6 +1916,10 @@ function renderHoleDifficulty() {
                     valueLabels += `<text x="${cx.toFixed(1)}" y="${vY.toFixed(1)}" text-anchor="middle" font-size="6.5" fill="${col}" opacity="0.9" font-family="monospace">${sign}${avg.toFixed(2)}</text>`;
                 }
             }
+            const avgScore = (pars[i] + avg).toFixed(2);
+            const sign = avg > 0 ? '+' : '';
+            const diff = avg > 0.25 ? 'Hard' : avg < -0.25 ? 'Easy' : 'Neutral';
+            hitAreas += `<rect x="${(cx - bGap/2).toFixed(1)}" y="${pT}" width="${bGap.toFixed(1)}" height="${cH}" fill="transparent" style="cursor:pointer"><title>Hole ${i+1} · Par ${pars[i]}\nAvg: ${avgScore} (${sign}${avg.toFixed(2)})\n${counts[i]} players · ${diff}</title></rect>`;
         }
 
         const amenCorner = [10, 11, 12].includes(i);
@@ -1923,10 +1928,10 @@ function renderHoleDifficulty() {
     });
 
     const baseline = `<line x1="${pL}" y1="${mid}" x2="${W - pR}" y2="${mid}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>`;
-    const labelU   = `<text x="${pL}" y="${pT + 8}" font-size="6" fill="#4ade80" opacity="0.55" font-family="monospace">EASY</text>`;
-    const labelO   = `<text x="${pL}" y="${pT + cH - 2}" font-size="6" fill="#d94f4f" opacity="0.55" font-family="monospace">HARD</text>`;
+    const labelU   = `<text x="${pL}" y="${pT + 8}" font-size="6" fill="#d94f4f" opacity="0.55" font-family="monospace">HARD</text>`;
+    const labelO   = `<text x="${pL}" y="${pT + cH - 2}" font-size="6" fill="#4ade80" opacity="0.55" font-family="monospace">EASY</text>`;
 
-    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="chart-svg" style="height:${H}px">${baseline}${labelU}${labelO}${bars}${valueLabels}${holeLabels}</svg>`;
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="chart-svg" style="height:${H}px">${baseline}${labelU}${labelO}${bars}${valueLabels}${holeLabels}${hitAreas}</svg>`;
     if (tag) tag.textContent = `R${round} · ${played}/18 HOLES`;
 }
 
