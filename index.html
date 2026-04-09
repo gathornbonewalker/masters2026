@@ -502,6 +502,63 @@
         #refresh-footer { position:fixed; bottom:6px; right:10px; font-family:'JetBrains Mono',monospace; font-size:7.5px; color:var(--text-muted); letter-spacing:1px; pointer-events:none; }
         @keyframes fadeUp { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:translateY(0)} }
         .fade-in { animation:fadeUp 0.3s ease; }
+
+        /* ── NOTICE BUTTON & MODAL ───────────────────────── */
+        #notice-btn {
+            font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:2px;
+            color:rgba(201,168,76,0.7); border:1px solid rgba(201,168,76,0.35);
+            background:rgba(201,168,76,0.06); border-radius:2px;
+            padding:4px 10px; cursor:pointer; flex-shrink:0;
+            transition:color 0.2s, background 0.2s, border-color 0.2s;
+            text-transform:uppercase;
+        }
+        #notice-btn:hover { color:var(--gold); background:rgba(201,168,76,0.12); border-color:rgba(201,168,76,0.6); }
+        #notice-modal {
+            display:none; position:fixed; inset:0; z-index:200;
+            background:rgba(0,0,0,0.82); backdrop-filter:blur(5px);
+            align-items:center; justify-content:center;
+        }
+        #notice-modal.open { display:flex; }
+        #notice-card {
+            background:var(--bg-panel); border:1px solid rgba(201,168,76,0.3);
+            border-radius:4px; width:540px; max-width:92vw; max-height:88vh;
+            overflow-y:auto; position:relative;
+            box-shadow:0 24px 64px rgba(0,0,0,0.85);
+        }
+        #notice-card::-webkit-scrollbar { width:3px; }
+        #notice-card::-webkit-scrollbar-thumb { background:var(--green); }
+        .notice-header {
+            padding:20px 24px 16px;
+            background:linear-gradient(135deg,#0a1a0c 0%,#0f1f14 100%);
+            border-bottom:1px solid rgba(201,168,76,0.2);
+        }
+        .notice-title {
+            font-family:'Playfair Display',serif; font-size:20px; font-weight:700;
+            color:var(--gold-light); margin-bottom:4px;
+        }
+        .notice-subtitle {
+            font-family:'JetBrains Mono',monospace; font-size:8px;
+            letter-spacing:3px; color:var(--text-muted); text-transform:uppercase;
+        }
+        .notice-body {
+            padding:22px 24px 24px; font-size:12px; color:var(--text-dim);
+            line-height:1.75;
+        }
+        .notice-body p { margin:0 0 14px; }
+        .notice-body p:last-child { margin-bottom:0; }
+        .notice-body strong { color:var(--text); font-weight:600; }
+        .notice-close {
+            position:absolute; top:12px; right:14px;
+            font-family:'JetBrains Mono',monospace; font-size:16px; color:var(--text-muted);
+            cursor:pointer; background:none; border:none; line-height:1;
+            transition:color 0.2s;
+        }
+        .notice-close:hover { color:var(--text); }
+        .notice-footer {
+            padding:12px 24px; border-top:1px solid var(--border);
+            font-family:'JetBrains Mono',monospace; font-size:8px;
+            color:var(--text-muted); letter-spacing:1px; text-align:center;
+        }
     </style>
 </head>
 <body>
@@ -530,9 +587,29 @@
         <div class="hdr-stat"><span class="hdr-lbl">Purse</span><span class="hdr-val gold">$21,000,000</span></div>
         <div class="hdr-stat"><span class="hdr-lbl">Winner</span><span class="hdr-val gold">$3,600,000</span></div>
     </div>
+    <button id="notice-btn" onclick="openNotice()">Notice</button>
     <div class="hdr-countdown">
         <span class="hdr-lbl">Round 1 Tee-off</span>
         <span class="hdr-val gold" id="hdr-countdown">—</span>
+    </div>
+</div>
+
+<!-- ═══ NOTICE MODAL ══════════════════════════════════════════ -->
+<div id="notice-modal" onclick="if(event.target===this)closeNotice()">
+    <div id="notice-card">
+        <button class="notice-close" onclick="closeNotice()">✕</button>
+        <div class="notice-header">
+            <div class="notice-title">Legal Notice</div>
+            <div class="notice-subtitle">Fan Dashboard · Unofficial · Not for Profit</div>
+        </div>
+        <div class="notice-body">
+            <p>This is an <strong>unofficial, not-for-profit fan dashboard</strong> created for personal and informational use only. It is not affiliated with, sponsored by, endorsed by, or connected in any commercial or official capacity to Augusta National Golf Club, The Masters Tournament, ESPN, or any of their subsidiaries, partners, or rights holders.</p>
+            <p>All scores, statistics, leaderboard data, tee times, and tournament information are sourced from publicly accessible feeds and are the property of <strong>Augusta National Golf Club</strong> and/or <strong>ESPN</strong>. All video streams are delivered directly from and remain the property of <strong>Augusta National Golf Club</strong>. No content is hosted, stored, modified, or re-streamed by this site.</p>
+            <p>All trademarks, logos, trade names, and intellectual property associated with The Masters Tournament, Augusta National Golf Club, and ESPN are the exclusive property of their respective owners. Their appearance here does not imply any affiliation or endorsement.</p>
+            <p>Player images, where displayed, are sourced from publicly accessible URLs on masters.com and remain the property of Augusta National Golf Club.</p>
+            <p>This dashboard generates <strong>no revenue</strong>, displays no advertising, and is shared purely for the enjoyment of the sport. If you are a rights holder and have concerns regarding any content displayed here, please contact us and it will be addressed promptly.</p>
+        </div>
+        <div class="notice-footer">© Augusta National Golf Club · All Rights Reserved · masters.com</div>
     </div>
 </div>
 
@@ -1659,8 +1736,13 @@ function closePlayerCard() {
     document.getElementById('player-modal').classList.remove('open');
 }
 
+function openNotice()  { document.getElementById('notice-modal').classList.add('open'); }
+function closeNotice() { document.getElementById('notice-modal').classList.remove('open'); }
+
 // Close on Escape key
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closePlayerCard(); });
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closePlayerCard(); closeNotice(); }
+});
 
 // ─── LEADERBOARD RESIZE ───────────────────────────────────────
 function initResizeHandle() {
