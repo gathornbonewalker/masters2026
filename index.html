@@ -501,6 +501,17 @@
 
         #refresh-footer { position:fixed; bottom:6px; right:10px; font-family:'JetBrains Mono',monospace; font-size:7.5px; color:var(--text-muted); letter-spacing:1px; pointer-events:none; }
 
+        /* ── CHARTS ──────────────────────────────────────── */
+        .chart-body { padding:10px 12px 12px; }
+        .chart-placeholder {
+            font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:2px;
+            color:var(--text-muted); text-align:center; padding:14px 0; text-transform:uppercase;
+        }
+        .chart-svg { width:100%; display:block; overflow:visible; }
+        /* Live thru indicator in leaderboard */
+        .lb-thru { font-size:8px; color:var(--text-muted); line-height:1; }
+        .lb-thru.live { color:var(--green-bright); font-weight:600; }
+
         /* ══ MOBILE ═══════════════════════════════════════════ */
         #mobile-tabs { display:none; }
 
@@ -822,6 +833,18 @@
             <div id="weather-body"><div class="loading-msg">FETCHING...</div></div>
         </div>
 
+        <!-- Score Distribution -->
+        <div class="section">
+            <div class="sec-hdr"><div class="col-hdr-accent"></div><span class="sec-title">Score Distribution</span><span class="sec-tag" id="dist-tag">FIELD</span></div>
+            <div class="chart-body"><div id="score-dist-chart"><div class="chart-placeholder">Available During Tournament</div></div></div>
+        </div>
+
+        <!-- Hole Difficulty -->
+        <div class="section">
+            <div class="sec-hdr"><div class="col-hdr-accent"></div><span class="sec-title">Hole Difficulty · Live</span><span class="sec-tag" id="hole-diff-tag">AVG vs PAR</span></div>
+            <div class="chart-body"><div id="hole-diff-chart"><div class="chart-placeholder">Available During Tournament</div></div></div>
+        </div>
+
         <!-- Featured Groups -->
         <div class="section">
             <div class="sec-hdr"><div class="col-hdr-accent"></div><span class="sec-title">Featured Groups · R1</span><span class="sec-tag">THU APR 9</span></div>
@@ -1027,7 +1050,7 @@ function buildLbRowHtml(p, i) {
             <span class="lb-flag">${p.flag}</span>
             <div class="lb-info">
                 <div class="lb-name">${p.nameHtml}</div>
-                <div class="lb-thru">${p.thru}</div>
+                <div class="lb-thru${p.thruLive ? ' live' : ''}">${p.thruLive ? '▶ ' : ''}${p.thru}</div>
             </div>
             <span class="lb-score ${p.totCls}">${p.tot}</span>
             <span class="lb-today ${p.todayCls}">${p.today}</span>
@@ -1072,6 +1095,7 @@ function applyLbView() {
     document.getElementById('lb-rows').innerHTML = html || `<div class="loading-msg">${lbFilter ? 'NO MATCHES' : 'NO DATA'}</div>`;
     renderLbColHdr();
     renderFavorites();
+    renderScoreDistribution();
 }
 
 function fmtCountdown(ms) {
@@ -1431,8 +1455,10 @@ async function fetchLeaderboard() {
 
         lbMode = 'live';
         lbPlayers = players.map(p => {
-            const name  = p.full_name || p.display_name2 || '—';
-            const champ = p.past ? ' <span style="color:var(--gold);font-size:9px">★</span>' : '';
+            const name    = p.full_name || p.display_name2 || '—';
+            const champ   = p.past ? ' <span style="color:var(--gold);font-size:9px">★</span>' : '';
+            const thruNum = p.thru ? parseInt(p.thru) : null;
+            const thruLive = thruNum !== null && thruNum < 18;
             return {
                 id: p.id, name,
                 flag: flagEmoji(p.countryCode || ''),
@@ -1440,13 +1466,15 @@ async function fetchLeaderboard() {
                 posNum: parseFloat(p.sort_order) || 999,
                 tot: fmtMastersScore(p.topar),   totRaw: scoreToNum(p.topar),   totCls: mastersScoreCls(p.topar),
                 today: fmtMastersScore(p.today), todayRaw: scoreToNum(p.today), todayCls: mastersScoreCls(p.today),
-                thru: p.thru ? (p.thru === '18' ? 'F' : `thru ${p.thru}`) : '',
+                thru: p.thru ? (p.thru === '18' ? 'F' : `H${p.thru}`) : '',
+                thruLive,
                 isCut: p.status === 'C' || p.status === 'MC',
                 nameHtml: name + champ,
                 time: '', timeRaw: 0, country: '',
             };
         });
         applyLbView();
+        renderHoleDifficulty();
 
     } catch(e) {
         // Fall back to ESPN if masters.com scores blocked
@@ -1538,6 +1566,131 @@ function renderField() {
         });
     });
     applyLbView();
+}
+
+// ─── SCORE DISTRIBUTION ──────────────────────────────────────
+function renderScoreDistribution() {
+    const el = document.getElementById('score-dist-chart');
+    const tag = document.getElementById('dist-tag');
+    if (!el) return;
+
+    const players = lbPlayers.filter(p => !p.isCut);
+    if (!players.length || (lbMode !== 'live' && lbMode !== 'espn')) {
+        el.innerHTML = '<div class="chart-placeholder">Available During Tournament</div>';
+        if (tag) tag.textContent = 'FIELD';
+        return;
+    }
+
+    const rawScores = players.map(p => p.totRaw);
+    const minS = Math.max(-16, Math.min(...rawScores));
+    const maxS = Math.min(16,  Math.max(...rawScores));
+
+    const freq = {};
+    for (let s = minS; s <= maxS; s++) freq[s] = 0;
+    players.forEach(p => { const s = Math.max(minS, Math.min(maxS, p.totRaw)); freq[s]++; });
+
+    const maxCount = Math.max(...Object.values(freq), 1);
+    const range    = maxS - minS + 1;
+    const W = 268, H = 96, pL = 4, pR = 4, pT = 16, pB = 18;
+    const cW = W - pL - pR, cH = H - pT - pB;
+    const barGap = cW / range;
+    const barW   = Math.max(2, Math.floor(barGap * 0.72));
+
+    let bars = '', countLabels = '', axisLabels = '';
+
+    for (let s = minS; s <= maxS; s++) {
+        const count = freq[s] || 0;
+        const cx    = pL + (s - minS + 0.5) * barGap;
+        const x     = cx - barW / 2;
+        const bH    = count > 0 ? Math.max(3, Math.round((count / maxCount) * cH)) : 0;
+        const y     = pT + cH - bH;
+        const col   = s < 0 ? '#4ade80' : s === 0 ? '#c9a84c' : '#d94f4f';
+
+        if (count > 0) {
+            bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW}" height="${bH}" fill="${col}" opacity="0.82" rx="1"/>`;
+            const labelY = bH > 13 ? y + 10 : y - 3;
+            const labelFill = bH > 13 ? 'rgba(0,0,0,0.65)' : col;
+            countLabels += `<text x="${cx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="middle" font-size="7.5" fill="${labelFill}" font-family="monospace">${count}</text>`;
+        }
+
+        if (s === 0 || s === minS || s === maxS || (range <= 20 ? s % 2 === 0 : s % 3 === 0)) {
+            const lbl = s === 0 ? 'E' : s > 0 ? `+${s}` : `${s}`;
+            axisLabels += `<text x="${cx.toFixed(1)}" y="${H - 4}" text-anchor="middle" font-size="7" fill="${s < 0 ? '#4ade80' : s === 0 ? '#c9a84c' : '#d94f4f'}" opacity="0.8" font-family="monospace">${lbl}</text>`;
+        }
+    }
+
+    const baseline = `<line x1="${pL}" y1="${pT + cH + 1}" x2="${W - pR}" y2="${pT + cH + 1}" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="chart-svg" style="height:${H}px">${baseline}${bars}${countLabels}${axisLabels}</svg>`;
+    if (tag) tag.textContent = `${players.length} PLAYERS`;
+}
+
+// ─── HOLE DIFFICULTY ──────────────────────────────────────────
+function renderHoleDifficulty() {
+    const el  = document.getElementById('hole-diff-chart');
+    const tag = document.getElementById('hole-diff-tag');
+    if (!el) return;
+
+    if (!scoresData || parseInt(scoresData.currentRound) >= 1000) {
+        el.innerHTML = '<div class="chart-placeholder">Available During Tournament</div>';
+        if (tag) tag.textContent = 'AVG vs PAR';
+        return;
+    }
+
+    const round   = Math.min(Math.max(parseInt(scoresData.currentRound) || 1, 1), 4);
+    const pars    = (scoresData.pars?.[`round${round}`]) || PARS;
+    const players = scoresData.player || [];
+
+    const totals = Array(18).fill(0), counts = Array(18).fill(0);
+    players.forEach(p => {
+        const rd = p[`round${round}`];
+        if (!rd?.scores) return;
+        rd.scores.forEach((s, i) => { if (s > 0) { totals[i] += s - pars[i]; counts[i]++; } });
+    });
+
+    const avgs   = totals.map((t, i) => counts[i] >= 3 ? t / counts[i] : null);
+    const played = avgs.filter(v => v !== null).length;
+    const absMax = Math.max(0.4, ...avgs.filter(v => v !== null).map(Math.abs));
+
+    const W = 268, H = 108, pL = 6, pR = 4, pT = 8, pB = 22;
+    const cW = W - pL - pR, cH = H - pT - pB;
+    const mid  = pT + cH / 2;
+    const bGap = cW / 18;
+    const bW   = Math.max(3, Math.floor(bGap * 0.72));
+
+    let bars = '', holeLabels = '', valueLabels = '';
+
+    avgs.forEach((avg, i) => {
+        const cx = pL + (i + 0.5) * bGap;
+        const x  = cx - bW / 2;
+
+        if (avg === null) {
+            bars += `<rect x="${x.toFixed(1)}" y="${(mid - 1).toFixed(1)}" width="${bW}" height="2" fill="rgba(255,255,255,0.08)" rx="1"/>`;
+        } else {
+            const norm = Math.max(-1, Math.min(1, avg / absMax));
+            const bH   = Math.max(3, Math.abs(norm) * cH / 2);
+            const y    = avg >= 0 ? mid : mid - bH;
+            const col  = avg > 0.25 ? '#d94f4f' : avg < -0.25 ? '#4ade80' : '#c9a84c';
+            bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${bH.toFixed(1)}" fill="${col}" opacity="0.85" rx="1"/>`;
+            if (Math.abs(avg) > 0.3) {
+                const vY = avg >= 0 ? y + bH + 9 : y - 3;
+                if (vY > pT + 2 && vY < H - pB) {
+                    const sign = avg > 0 ? '+' : '';
+                    valueLabels += `<text x="${cx.toFixed(1)}" y="${vY.toFixed(1)}" text-anchor="middle" font-size="6.5" fill="${col}" opacity="0.9" font-family="monospace">${sign}${avg.toFixed(2)}</text>`;
+                }
+            }
+        }
+
+        const amenCorner = [10, 11, 12].includes(i);
+        const lCol = amenCorner ? 'rgba(201,168,76,0.9)' : 'rgba(255,255,255,0.35)';
+        holeLabels += `<text x="${cx.toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="7" fill="${lCol}" font-family="monospace">${i + 1}</text>`;
+    });
+
+    const baseline = `<line x1="${pL}" y1="${mid}" x2="${W - pR}" y2="${mid}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>`;
+    const labelU   = `<text x="${pL}" y="${pT + 8}" font-size="6" fill="#4ade80" opacity="0.55" font-family="monospace">EASY</text>`;
+    const labelO   = `<text x="${pL}" y="${pT + cH - 2}" font-size="6" fill="#d94f4f" opacity="0.55" font-family="monospace">HARD</text>`;
+
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="chart-svg" style="height:${H}px">${baseline}${labelU}${labelO}${bars}${valueLabels}${holeLabels}</svg>`;
+    if (tag) tag.textContent = `R${round} · ${played}/18 HOLES`;
 }
 
 // ─── NEWS ─────────────────────────────────────────────────────
