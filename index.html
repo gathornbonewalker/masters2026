@@ -1216,6 +1216,15 @@ async function fetchStreamConfig() {
     }
 }
 
+async function refreshStreamStatus() {
+    try {
+        const data = await (await fetch(LIVE_VIDEO_URL)).json();
+        streamChannels = data.channels || [];
+    } catch(e) { /* keep existing channel data */ }
+    renderChannelTabs();
+    // Don't call switchChannel — leave the active video untouched
+}
+
 function renderChannelTabs() {
     const el = document.getElementById('channel-tabs');
     document.getElementById('pre-event-slate').style.display = 'none';
@@ -1839,7 +1848,7 @@ function startRefresh() {
         const el=document.getElementById('rf-timer'); if(el) el.textContent=rfSecs;
         if (rfSecs<=0) {
             fetchLeaderboard(); fetchWeather(); fetchNews();
-            fetchStreamConfig(); // re-check live status
+            refreshStreamStatus(); // update tab labels without touching video
             renderTimeline();
             rfSecs=60;
         }
