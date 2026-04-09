@@ -1403,7 +1403,9 @@ async function fetchWeather() {
 // ─── LEADERBOARD (masters.com scores.json) ───────────────────
 async function fetchLeaderboard() {
     try {
-        const data = await (await fetch(SCORES_URL)).json();
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 5000);
+        const data = await (await fetch(SCORES_URL, {signal: ctrl.signal})).json();
         const d = data.data;
         if (!d) { showLbEmpty(); return; }
         scoresData = d; // cache for player card lookups
