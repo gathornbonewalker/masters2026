@@ -1166,21 +1166,23 @@ async function fetchStreamConfig() {
         console.warn('Stream config unavailable (CORS?):', e);
     }
     renderChannelTabs();
-    // Default to YouTube tab — always works
-    switchChannel('yt');
+
+    // Restore saved channel if it still exists, else pick first live stream
+    const saved = localStorage.getItem('masters_channel');
+    const savedChannel = saved && streamChannels.find(c => c.channelId === saved);
+    if (savedChannel) {
+        switchChannel(saved);
+    } else {
+        const firstLive = streamChannels.find(c => c.live && c.type !== 'radio');
+        const firstAny  = streamChannels[0];
+        if (firstLive)  switchChannel(firstLive.channelId);
+        else if (firstAny) switchChannel(firstAny.channelId);
+    }
 }
 
 function renderChannelTabs() {
     const el = document.getElementById('channel-tabs');
     document.getElementById('pre-event-slate').style.display = 'none';
-
-    // YouTube is always first
-    const ytLive = ROUND1_START <= new Date();
-    const ytTab = `
-        <div class="ch-tab ${activeChannelId==='yt'?'active':''}" id="tab-yt" onclick="switchChannel('yt')">
-            <div class="ch-tab-name">YouTube</div>
-            <div class="ch-tab-status ${ytLive?'live':'off'}">${ytLive?'● LIVE':'○ OFF AIR'}</div>
-        </div>`;
 
     const chTabs = streamChannels.map(ch => {
         const isLive  = ch.live;
@@ -1196,11 +1198,12 @@ function renderChannelTabs() {
             </div>`;
     }).join('');
 
-    el.innerHTML = ytTab + chTabs;
+    el.innerHTML = chTabs;
 }
 
 function switchChannel(channelId) {
     activeChannelId = channelId;
+    localStorage.setItem('masters_channel', channelId); // persist across refreshes
 
     // Update tab active state
     document.querySelectorAll('.ch-tab').forEach(t => t.classList.remove('active'));
@@ -1216,26 +1219,6 @@ function switchChannel(channelId) {
 
     // Stop any existing HLS
     if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
-
-    // YouTube tab
-    if (channelId === 'yt') {
-        const isLive = ROUND1_START <= new Date();
-        if (isLive) {
-            const iframe = document.getElementById('yt-iframe');
-            iframe.style.display = 'block';
-            if (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href) {
-                iframe.src = YT_EMBED;
-            }
-        } else {
-            // Show off-air slate for YouTube pre-tournament
-            const slate = document.getElementById('stream-slate');
-            slate.style.display = 'flex';
-            document.getElementById('slate-img').src = '';
-            document.getElementById('slate-channel-name').textContent = 'Masters on YouTube';
-            document.getElementById('slate-caption').textContent = 'Live stream begins Thursday April 9th';
-        }
-        return;
-    }
 
     const ch = streamChannels.find(c => c.channelId === channelId);
     if (!ch) return;
@@ -1433,7 +1416,8 @@ async function fetchLeaderboard() {
         const preEvent = round >= 1000 || statusRound === 'NNNN';
         if (preEvent) { showLbEmpty(); return; }
 
-        const players = (d.player || []).filter(p => p.status !== 'X' && p.pos !== '');
+        // Include all players except withdrawals — early in round many have pos:'' (not yet teed off)
+        const players = (d.player || []).filter(p => p.status !== 'X' && p.status !== 'WD');
         if (!players.length) { showLbEmpty(); return; }
 
         // Sort by sort_order (masters.com already provides this)
