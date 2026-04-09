@@ -1490,25 +1490,43 @@ async function fetchLeaderboardESPN() {
             .slice().sort((a,b)=>(parseInt(a.status?.position?.id)||999)-(parseInt(b.status?.position?.id)||999));
         const allScheduled = competitors.every(p=>!p.status?.type?.name||p.status.type.name==='STATUS_SCHEDULED');
         if (allScheduled || !competitors.length) { showLbEmpty(); return; }
-        const round = evt.status?.period || 1;
-        document.getElementById('hdr-round').textContent = `R${round}`;
+        const round = evt.competitions?.[0]?.status?.period || 1;
+        const roundStatus = evt.competitions?.[0]?.status?.type?.name || '';
+        const roundLabel  = roundStatus === 'STATUS_IN_PROGRESS' ? 'IN PROGRESS' : roundStatus === 'STATUS_FINAL' ? 'COMPLETE' : `R${round}`;
+        document.getElementById('hdr-round').textContent    = `R${round}`;
+        document.getElementById('lb-round-tag').textContent = roundLabel;
+
         lbMode = 'espn';
-        lbPlayers = competitors.slice(0,70).map((p,i) => {
+        lbPlayers = competitors.map((p,i) => {
             const name   = p.athlete?.displayName || '?';
             const espnId = String(p.athlete?.id || i);
+            const posId  = parseInt(p.status?.position?.id) || 0;
+            const thruNum = p.status?.thru || 0;
+            const scheduled = p.status?.type?.name === 'STATUS_SCHEDULED';
+            const teeTime = p.status?.teeTime ? new Date(p.status.teeTime).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}) : '';
             return {
                 id: espnId, name,
                 flag: flagEmoji(p.athlete?.flag?.alt || p.athlete?.country || ''),
-                pos: String(p.status?.position?.displayName || i+1),
-                posNum: parseInt(p.status?.position?.id) || i+1,
-                tot: fmtScore(p.score),                           totRaw: scoreToNum(p.score),    totCls: scoreCls(p.score),
-                today: fmtScore(p.linescores?.[round-1]?.displayValue), todayRaw: scoreToNum(p.linescores?.[round-1]?.displayValue),
-                todayCls: scoreCls(p.linescores?.[round-1]?.displayValue),
-                thru: p.status?.thru ? `thru ${p.status.thru}` : (p.status?.type?.shortDetail || ''),
+                pos: posId > 0 ? String(p.status?.position?.displayName || posId) : '—',
+                posNum: posId > 0 ? posId : 9000 + i,
+                tot: scheduled ? '—' : fmtScore(p.score), totRaw: scoreToNum(p.score), totCls: scoreCls(p.score),
+                today: scheduled ? (teeTime || '—') : fmtScore(p.linescores?.[round-1]?.displayValue),
+                todayRaw: scoreToNum(p.linescores?.[round-1]?.displayValue),
+                todayCls: scheduled ? '' : scoreCls(p.linescores?.[round-1]?.displayValue),
+                thru: scheduled ? '' : (thruNum > 0 ? `H${thruNum}` : ''),
+                thruLive: !scheduled && thruNum > 0 && thruNum < 18,
                 isCut: false, nameHtml: name,
                 time: '', timeRaw: 0, country: '',
             };
         });
+
+        // Update header with leader
+        const leader = lbPlayers.find(p => p.posNum <= 9000);
+        if (leader) {
+            document.getElementById('hdr-leader').textContent = leader.name.split(' ').pop();
+            document.getElementById('hdr-score').textContent  = leader.tot;
+        }
+
         applyLbView();
     } catch(e) { showLbEmpty(); }
 }
