@@ -1826,7 +1826,7 @@ function renderHoleDifficulty() {
 // ─── NEWS ─────────────────────────────────────────────────────
 async function fetchNews() {
     try {
-        const data = await (await fetch('https://site.api.espn.com/apis/site/v2/sports/golf/news?limit=20')).json();
+        const data = await (await fetch('https://site.api.espn.com/apis/site/v2/sports/golf/pga/news?limit=20')).json();
         const arts = data.articles || [];
         document.getElementById('news-count').textContent = `${arts.length} STORIES`;
         document.getElementById('news-list').innerHTML = arts.map(a=>`
