@@ -1864,13 +1864,16 @@ function renderHoleDifficulty() {
     const tag = document.getElementById('hole-diff-tag');
     if (!el) return;
 
-    if (!scoresData || parseInt(scoresData.currentRound) >= 1000) {
+    const hasAnyScoresHD = scoresData?.player?.some(p => p.topar != null && p.topar !== '');
+    if (!scoresData || (parseInt(scoresData.currentRound) >= 1000 && !hasAnyScoresHD)) {
         el.innerHTML = '<div class="chart-placeholder">Available During Tournament</div>';
         if (tag) tag.textContent = 'AVG vs PAR';
         return;
     }
 
-    const round   = Math.min(Math.max(parseInt(scoresData.currentRound) || 1, 1), 4);
+    const rawRoundHD = parseInt(scoresData.currentRound);
+    const statusRoundHD = scoresData.statusRound || 'NNNN';
+    const round   = rawRoundHD >= 1000 ? Math.max(1, Math.min(4, statusRoundHD.search(/[PF]/)+1 || 1)) : Math.min(Math.max(rawRoundHD || 1, 1), 4);
     const pars    = (scoresData.pars?.[`round${round}`]) || PARS;
     const players = scoresData.player || [];
 
@@ -1902,11 +1905,11 @@ function renderHoleDifficulty() {
         } else {
             const norm = Math.max(-1, Math.min(1, avg / absMax));
             const bH   = Math.max(3, Math.abs(norm) * cH / 2);
-            const y    = avg >= 0 ? mid : mid - bH;
+            const y    = avg >= 0 ? mid - bH : mid;
             const col  = avg > 0.25 ? '#d94f4f' : avg < -0.25 ? '#4ade80' : '#c9a84c';
             bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${bH.toFixed(1)}" fill="${col}" opacity="0.85" rx="1"/>`;
             if (Math.abs(avg) > 0.3) {
-                const vY = avg >= 0 ? y + bH + 9 : y - 3;
+                const vY = avg >= 0 ? y - 3 : y + bH + 9;
                 if (vY > pT + 2 && vY < H - pB) {
                     const sign = avg > 0 ? '+' : '';
                     valueLabels += `<text x="${cx.toFixed(1)}" y="${vY.toFixed(1)}" text-anchor="middle" font-size="6.5" fill="${col}" opacity="0.9" font-family="monospace">${sign}${avg.toFixed(2)}</text>`;
