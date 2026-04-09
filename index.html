@@ -1410,17 +1410,19 @@ async function fetchLeaderboard() {
         if (!d) { showLbEmpty(); return; }
         scoresData = d; // cache for player card lookups
 
-        const round = parseInt(d.currentRound);
-        const statusRound = d.statusRound || 'NNNN'; // e.g. "FNNN", "PFNN"
-        const roundStatus = statusRound[Math.max(0, round-1)] || 'N'; // N=not started, P=in progress, F=finished
-
-        // Pre-tournament: currentRound=1000 or all N
-        const preEvent = round >= 1000 || statusRound === 'NNNN';
-        if (preEvent) { showLbEmpty(); return; }
-
-        // Include all players except withdrawals — early in round many have pos:'' (not yet teed off)
+        // Include all players except withdrawals
         const players = (d.player || []).filter(p => p.status !== 'X' && p.status !== 'WD');
+        const hasScores = players.some(p => p.topar != null && p.topar !== '');
+
+        const rawRound = parseInt(d.currentRound);
+        const statusRound = d.statusRound || 'NNNN';
+
+        // Pre-tournament: only if NO player has a score
+        if (!hasScores && (rawRound >= 1000 || statusRound === 'NNNN')) { showLbEmpty(); return; }
         if (!players.length) { showLbEmpty(); return; }
+
+        // If currentRound is 1000 but players have scores, infer round from statusRound
+        const round = rawRound >= 1000 ? Math.max(1, statusRound.search(/[PF]/)+1 || 1) : rawRound;
 
         // Sort by sort_order (masters.com already provides this)
         players.sort((a,b) => {
@@ -1429,7 +1431,8 @@ async function fetchLeaderboard() {
             return aPos - bPos;
         });
 
-        const roundLabel = roundStatus === 'P' ? 'IN PROGRESS' : roundStatus === 'F' ? 'COMPLETE' : `R${round}`;
+        const roundStatus = statusRound[Math.max(0, round-1)] || 'N';
+        const roundLabel = roundStatus === 'P' ? 'IN PROGRESS' : roundStatus === 'F' ? 'COMPLETE' : hasScores ? 'IN PROGRESS' : `R${round}`;
         document.getElementById('hdr-round').textContent    = `R${round}`;
         document.getElementById('lb-round-tag').textContent = roundLabel;
 
@@ -1787,7 +1790,8 @@ function renderFavorites() {
     }
 
     const round = Math.min(Math.max(parseInt(scoresData?.currentRound) || 1, 1), 4);
-    const preEvent = !scoresData || parseInt(scoresData.currentRound) >= 1000;
+    const hasAnyScores = scoresData?.player?.some(p => p.topar != null && p.topar !== '');
+    const preEvent = !scoresData || (parseInt(scoresData.currentRound) >= 1000 && !hasAnyScores);
 
     let html = '';
     favorites.forEach(pid => {
@@ -1902,7 +1906,8 @@ function toggleModalFav() {
 function buildScorecard(p, activeRound) {
     const scTitle = document.getElementById('pm-sc-title');
     const scWrap  = document.getElementById('pm-scorecard');
-    const preEvent = !scoresData || parseInt(scoresData.currentRound) >= 1000;
+    const hasAnyScores = scoresData?.player?.some(p => p.topar != null && p.topar !== '');
+    const preEvent = !scoresData || (parseInt(scoresData.currentRound) >= 1000 && !hasAnyScores);
 
     if (preEvent) {
         scTitle.textContent = 'ROUND 1 SCORECARD — Not yet started';
