@@ -228,6 +228,12 @@
         .ch-tab-status.off  { color:var(--text-muted); }
         .ch-tab-status.radio { color:var(--gold); }
 
+        /* View mode toggle (floating overlay on stream) */
+        .view-toggle { display:flex; align-items:center; gap:3px; position:absolute; top:6px; right:6px; z-index:10; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); border-radius:5px; padding:3px 4px; border:1px solid rgba(255,255,255,0.15); }
+        .view-btn { font-family:'JetBrains Mono',monospace; font-size:10px; padding:4px 10px; border:1px solid transparent; border-radius:3px; background:transparent; color:rgba(255,255,255,0.6); cursor:pointer; letter-spacing:1px; transition:all .15s; white-space:nowrap; }
+        .view-btn:hover { background:rgba(255,255,255,0.1); color:#fff; }
+        .view-btn.active { background:rgba(0,103,71,0.5); color:var(--green-bright); border-color:var(--green); }
+
         /* Stream player area */
         .stream-area {
             position:relative; background:#000; flex-shrink:0;
@@ -235,6 +241,20 @@
         #stream-video {
             width:100%; aspect-ratio:16/9; display:block; background:#000;
         }
+
+        /* Multi-view grid */
+        .mv-grid { display:grid; gap:2px; background:#000; }
+        .mv-grid.mv-1 { grid-template-columns:1fr; }
+        .mv-grid.mv-2 { grid-template-columns:1fr 1fr; }
+        .mv-grid.mv-4 { grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
+        .mv-slot { position:relative; background:#0a0f0a; aspect-ratio:16/9; overflow:hidden; }
+        .mv-slot video, .mv-slot iframe { width:100%; height:100%; display:block; object-fit:contain; border:none; }
+        .mv-slot-picker { position:absolute; top:4px; left:4px; z-index:5; font-family:'JetBrains Mono',monospace; font-size:8px; padding:2px 6px; background:rgba(0,0,0,0.7); color:var(--text-dim); border:1px solid rgba(255,255,255,0.15); border-radius:3px; cursor:pointer; appearance:none; -webkit-appearance:none; }
+        .mv-slot-picker:hover { border-color:var(--green); color:var(--green-bright); }
+        .mv-slot-picker option { background:#111; color:#ccc; }
+        .mv-slot-slate { display:flex; flex-direction:column; align-items:center; justify-content:center; position:absolute; inset:0; background:radial-gradient(ellipse at center, #0d2014 0%, #060a07 70%); gap:6px; }
+        .mv-slot-slate-name { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); letter-spacing:1.5px; }
+        .mv-slot-slate-status { font-family:'JetBrains Mono',monospace; font-size:7px; color:var(--text-muted); letter-spacing:1px; }
 
         /* Slate (off air) */
         .stream-slate {
@@ -767,11 +787,11 @@
     <!-- ── CENTER: Stream + News ─────────────────────────── -->
     <div class="col" id="center-col">
 
-        <!-- Channel selector tabs (populated by JS) -->
+        <!-- Channel tabs -->
         <div class="channel-tabs" id="channel-tabs"></div>
 
-        <!-- Stream area: shows pre-event, slate, video, or radio depending on state -->
-        <div id="stream-area">
+        <!-- Stream area -->
+        <div id="stream-area" style="position:relative;">
             <!-- Pre-tournament placeholder (hidden once channels load) -->
             <div class="pre-event-slate" id="pre-event-slate">
                 <div class="pre-logo">
@@ -789,26 +809,10 @@
                 </div>
             </div>
 
-            <!-- Per-channel slate (off air) -->
-            <div class="stream-slate" id="stream-slate" style="display:none; aspect-ratio:16/9; position:relative;">
-                <img id="slate-img" class="slate-img" src="" alt="">
-                <div class="slate-content">
-                    <div class="slate-off-badge">● OFF AIR</div>
-                    <div class="slate-channel-name" id="slate-channel-name">—</div>
-                    <div class="slate-caption" id="slate-caption">Coverage continues April 9th</div>
-                    <div class="slate-countdown" id="slate-countdown"></div>
-                </div>
-            </div>
+            <!-- Multi-view grid (populated by JS) -->
+            <div class="mv-grid" id="mv-grid"></div>
 
-            <!-- YouTube embed (always available, no CORS) -->
-            <iframe id="yt-iframe" style="display:none; width:100%; aspect-ratio:16/9; border:none;"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen src="about:blank"></iframe>
-
-            <!-- HLS video player -->
-            <video id="stream-video" style="display:none; width:100%; aspect-ratio:16/9; background:#000;" playsinline controls></video>
-
-            <!-- Radio player -->
+            <!-- Radio player (shared, shown below grid when radio selected) -->
             <div class="audio-bar" id="audio-bar" style="display:none;">
                 <div class="audio-icon">📻</div>
                 <div class="audio-title">Masters Radio</div>
@@ -943,6 +947,9 @@ const FLAGS = {
 let streamChannels   = [];  // from liveVideo.json
 let activeChannelId  = null;
 let hlsInstance      = null;
+let viewMode         = parseInt(localStorage.getItem('masters_viewmode')) || 1; // 1, 2, or 4
+let slotChannels     = JSON.parse(localStorage.getItem('masters_slots') || '{}'); // {0:'ch1', 1:'ch2', ...}
+let slotHls          = {};  // per-slot HLS instances
 let pairingsData     = [];  // all groups from pairings.json
 let scoresData       = null; // full scores.json data object
 
@@ -1202,18 +1209,7 @@ async function fetchStreamConfig() {
         console.warn('Stream config unavailable (CORS?):', e);
     }
     renderChannelTabs();
-
-    // Restore saved channel if it still exists, else pick first live stream
-    const saved = localStorage.getItem('masters_channel');
-    const savedChannel = saved && streamChannels.find(c => c.channelId === saved);
-    if (savedChannel) {
-        switchChannel(saved);
-    } else {
-        const firstLive = streamChannels.find(c => c.live && c.type !== 'radio');
-        const firstAny  = streamChannels[0];
-        if (firstLive)  switchChannel(firstLive.channelId);
-        else if (firstAny) switchChannel(firstAny.channelId);
-    }
+    renderMultiView();
 }
 
 async function refreshStreamStatus() {
@@ -1222,114 +1218,221 @@ async function refreshStreamStatus() {
         streamChannels = data.channels || [];
     } catch(e) { /* keep existing channel data */ }
     renderChannelTabs();
-    // Don't call switchChannel — leave the active video untouched
+    // Update slot dropdowns without touching active videos
+    updateSlotPickers();
 }
 
 function renderChannelTabs() {
     const el = document.getElementById('channel-tabs');
     document.getElementById('pre-event-slate').style.display = 'none';
 
-    const chTabs = streamChannels.map(ch => {
-        const isLive  = ch.live;
-        const isRadio = ch.type === 'radio';
-        const label   = isLive ? '● LIVE' : isRadio ? '♪ RADIO' : '○ OFF AIR';
-        const cls     = isLive ? 'live'   : isRadio ? 'radio'   : 'off';
-        const name    = ch.name.replace('Masters On the ','On the ').replace('Masters ','');
-        return `
-            <div class="ch-tab ${activeChannelId===ch.channelId?'active':''}"
-                 id="tab-${ch.channelId}" onclick="switchChannel('${ch.channelId}')">
+    const chTabs = streamChannels.filter(c => c.type !== 'radio').map(ch => {
+        const isLive = ch.live;
+        const label  = isLive ? '● LIVE' : '○ OFF AIR';
+        const cls    = isLive ? 'live' : 'off';
+        const name   = ch.name.replace('Masters On the ','On the ').replace('Masters ','');
+        return `<div class="ch-tab" style="pointer-events:none;">
                 <div class="ch-tab-name">${name}</div>
                 <div class="ch-tab-status ${cls}">${label}</div>
             </div>`;
     }).join('');
 
-    el.innerHTML = chTabs;
+    // Add radio tab if exists
+    const radio = streamChannels.find(c => c.type === 'radio');
+    const radioTab = radio ? `<div class="ch-tab${activeChannelId==='radio'?' active':''}" onclick="toggleRadio()">
+            <div class="ch-tab-name">Radio</div>
+            <div class="ch-tab-status radio">${radio.live ? '♪ LIVE' : '♪ RADIO'}</div>
+        </div>` : '';
+
+    el.innerHTML = chTabs + radioTab;
 }
 
-function switchChannel(channelId) {
-    activeChannelId = channelId;
-    localStorage.setItem('masters_channel', channelId); // persist across refreshes
+function setViewMode(mode) {
+    viewMode = mode;
+    localStorage.setItem('masters_viewmode', mode);
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(`vb-${mode}`);
+    if (btn) btn.classList.add('active');
+    renderMultiView();
+}
 
-    // Update tab active state
-    document.querySelectorAll('.ch-tab').forEach(t => t.classList.remove('active'));
-    const tab = document.getElementById(`tab-${channelId}`);
-    if (tab) tab.classList.add('active');
+function destroyAllSlots() {
+    for (const [key, hls] of Object.entries(slotHls)) {
+        if (hls && hls.destroy) hls.destroy();
+    }
+    slotHls = {};
+}
 
-    // Hide all stream views
-    document.getElementById('pre-event-slate').style.display = 'none';
-    document.getElementById('stream-slate').style.display    = 'none';
-    document.getElementById('stream-video').style.display    = 'none';
-    document.getElementById('yt-iframe').style.display       = 'none';
-    document.getElementById('audio-bar').style.display       = 'none';
+function getDefaultChannel(slotIdx) {
+    // Restore saved, or auto-assign channels to slots
+    if (slotChannels[slotIdx]) {
+        const ch = streamChannels.find(c => c.channelId === slotChannels[slotIdx]);
+        if (ch) return ch.channelId;
+    }
+    const nonRadio = streamChannels.filter(c => c.type !== 'radio');
+    const live = nonRadio.filter(c => c.live);
+    const pool = live.length ? live : nonRadio;
+    return pool[slotIdx % pool.length]?.channelId || nonRadio[0]?.channelId || '';
+}
 
-    // Stop any existing HLS
-    if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+function renderMultiView() {
+    const grid = document.getElementById('mv-grid');
+    if (!streamChannels.length) { grid.innerHTML = ''; return; }
+
+    destroyAllSlots();
+
+    // Remove old toggle if exists, add fresh one to stream-area
+    document.querySelector('#stream-area > .view-toggle')?.remove();
+    const streamArea = document.getElementById('stream-area');
+    streamArea.insertAdjacentHTML('afterbegin', `<div class="view-toggle">
+        <button class="view-btn${viewMode===1?' active':''}" id="vb-1" onclick="setViewMode(1)">1×</button>
+        <button class="view-btn${viewMode===2?' active':''}" id="vb-2" onclick="setViewMode(2)">2×</button>
+        <button class="view-btn${viewMode===4?' active':''}" id="vb-4" onclick="setViewMode(4)">4×</button>
+    </div>`);
+
+    grid.className = `mv-grid mv-${viewMode}`;
+    const count = viewMode; // 1, 2, or 4
+
+    let html = '';
+    for (let i = 0; i < count; i++) {
+        const chId = getDefaultChannel(i);
+        html += `<div class="mv-slot" id="mv-slot-${i}">
+            <select class="mv-slot-picker" id="mv-picker-${i}" onchange="slotChannelChanged(${i}, this.value)">
+                ${buildChannelOptions(chId)}
+            </select>
+            <div class="mv-slot-content" id="mv-content-${i}"></div>
+        </div>`;
+    }
+    grid.innerHTML = html;
+
+    // Initialize each slot
+    for (let i = 0; i < count; i++) {
+        const chId = document.getElementById(`mv-picker-${i}`).value;
+        slotChannels[i] = chId;
+        playInSlot(i, chId);
+    }
+    localStorage.setItem('masters_slots', JSON.stringify(slotChannels));
+}
+
+function buildChannelOptions(selectedId) {
+    const nonRadio = streamChannels.filter(c => c.type !== 'radio');
+    return nonRadio.map(ch => {
+        const name = ch.name.replace('Masters On the ','On the ').replace('Masters ','');
+        const live = ch.live ? ' ● LIVE' : '';
+        return `<option value="${ch.channelId}" ${ch.channelId===selectedId?'selected':''}>${name}${live}</option>`;
+    }).join('');
+}
+
+function updateSlotPickers() {
+    const count = viewMode;
+    for (let i = 0; i < count; i++) {
+        const picker = document.getElementById(`mv-picker-${i}`);
+        if (!picker) continue;
+        const current = picker.value;
+        picker.innerHTML = buildChannelOptions(current);
+    }
+}
+
+function slotChannelChanged(slotIdx, channelId) {
+    slotChannels[slotIdx] = channelId;
+    localStorage.setItem('masters_slots', JSON.stringify(slotChannels));
+    playInSlot(slotIdx, channelId);
+}
+
+function playInSlot(slotIdx, channelId) {
+    const container = document.getElementById(`mv-content-${slotIdx}`);
+    if (!container) return;
+
+    // Destroy existing HLS for this slot
+    if (slotHls[slotIdx]) { slotHls[slotIdx].destroy(); delete slotHls[slotIdx]; }
+    container.innerHTML = '';
 
     const ch = streamChannels.find(c => c.channelId === channelId);
-    if (!ch) return;
-
-    if (ch.type === 'radio') {
-        // Radio player
-        const bar = document.getElementById('audio-bar');
-        bar.style.display = 'flex';
-        const audio = document.getElementById('radio-audio');
-        const radioStatus = document.getElementById('radio-status');
-        if (ch.live && ch.desktop?.[0]?.url) {
-            radioStatus.textContent = '● LIVE — Masters Radio';
-            audio.style.display = 'block';
-            audio.src = ch.desktop[0].url;
-        } else {
-            radioStatus.textContent = 'OFF AIR — Coverage begins April 9th';
-            audio.style.display = 'none';
-        }
+    if (!ch) {
+        container.innerHTML = slotSlateHtml('No Channel', '');
         return;
     }
 
     if (!ch.live) {
-        // Show slate (off air)
-        const slate = document.getElementById('stream-slate');
-        slate.style.display = 'flex';
-        document.getElementById('slate-img').src         = ch.imagePath || '';
-        document.getElementById('slate-channel-name').textContent = ch.name;
-        document.getElementById('slate-caption').textContent      = ch.caption || 'Coverage continues April 9th';
+        const name = ch.name.replace('Masters On the ','On the ').replace('Masters ','');
+        container.innerHTML = slotSlateHtml(name, ch.caption || 'OFF AIR');
         return;
     }
 
-    // Live — play HLS stream
+    // Live — play HLS
     const url = ch.desktop?.[0]?.url;
-    if (!url) return;
+    if (!url) {
+        container.innerHTML = slotSlateHtml(ch.name, 'No stream URL');
+        return;
+    }
 
-    const video = document.getElementById('stream-video');
-    video.style.display = 'block';
+    const video = document.createElement('video');
+    video.style.cssText = 'width:100%;height:100%;background:#000;';
+    video.setAttribute('playsinline', '');
+    video.setAttribute('controls', '');
+    video.muted = viewMode > 1; // mute multi-view by default
+    container.appendChild(video);
 
     if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-        hlsInstance = new Hls({ lowLatencyMode: true });
-        hlsInstance.loadSource(url);
-        hlsInstance.attachMedia(video);
-        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(()=>{}));
-        hlsInstance.on(Hls.Events.ERROR, (evt, data) => {
+        const hls = new Hls({ lowLatencyMode: true });
+        slotHls[slotIdx] = hls;
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(()=>{}));
+        hls.on(Hls.Events.ERROR, (evt, data) => {
             if (data.fatal) {
-                // Fall back to slate on error
-                video.style.display = 'none';
-                showSlate(ch);
+                container.innerHTML = slotSlateHtml(ch.name, 'Stream error');
             }
         });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Safari native HLS
         video.src = url;
         video.play().catch(()=>{});
     } else {
-        showSlate(ch);
+        container.innerHTML = slotSlateHtml(ch.name, 'HLS not supported');
     }
 }
 
-function showSlate(ch) {
-    document.getElementById('stream-video').style.display = 'none';
-    const slate = document.getElementById('stream-slate');
-    slate.style.display = 'flex';
-    document.getElementById('slate-img').src = ch.imagePath || '';
-    document.getElementById('slate-channel-name').textContent = ch.name;
-    document.getElementById('slate-caption').textContent = ch.caption || '';
+function slotSlateHtml(name, caption) {
+    return `<div class="mv-slot-slate">
+        <div class="mv-slot-slate-name">${name}</div>
+        <div class="mv-slot-slate-status">${caption || 'OFF AIR'}</div>
+    </div>`;
+}
+
+function toggleRadio() {
+    const bar = document.getElementById('audio-bar');
+    const radio = streamChannels.find(c => c.type === 'radio');
+    if (!radio) return;
+    const isShowing = bar.style.display === 'flex';
+    if (isShowing) {
+        bar.style.display = 'none';
+        activeChannelId = null;
+    } else {
+        bar.style.display = 'flex';
+        activeChannelId = 'radio';
+        const audio = document.getElementById('radio-audio');
+        const radioStatus = document.getElementById('radio-status');
+        if (radio.live && radio.desktop?.[0]?.url) {
+            radioStatus.textContent = '● LIVE — Masters Radio';
+            audio.style.display = 'block';
+            audio.src = radio.desktop[0].url;
+        } else {
+            radioStatus.textContent = 'OFF AIR — Coverage begins April 9th';
+            audio.style.display = 'none';
+        }
+    }
+    renderChannelTabs();
+}
+
+// Legacy compat — old tab click in single-view mode
+function switchChannel(channelId) {
+    if (viewMode === 1) {
+        slotChannels[0] = channelId;
+        localStorage.setItem('masters_slots', JSON.stringify(slotChannels));
+        const picker = document.getElementById('mv-picker-0');
+        if (picker) picker.value = channelId;
+        playInSlot(0, channelId);
+    }
 }
 
 // ─── PAIRINGS / TEE TIMES ────────────────────────────────────
