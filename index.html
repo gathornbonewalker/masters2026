@@ -768,7 +768,7 @@
         <div class="hdr-stat"><span class="hdr-lbl">Purse</span><span class="hdr-val gold">$21,000,000</span></div>
         <div class="hdr-stat"><span class="hdr-lbl">Winner</span><span class="hdr-val gold">$3,600,000</span></div>
     </div>
-    <button id="version-btn" onclick="openRelease()" title="Click to see release notes — refresh page for updates">v1.7</button>
+    <button id="version-btn" onclick="openRelease()" title="Click to see release notes — refresh page for updates">v1.8</button>
     <button id="notice-btn" onclick="openNotice()">Notice</button>
     <div class="hdr-countdown">
         <span class="hdr-lbl">Round 1 Tee-off</span>
@@ -2336,8 +2336,13 @@ function openNotice()  { document.getElementById('notice-modal').classList.add('
 function closeNotice() { document.getElementById('notice-modal').classList.remove('open'); }
 
 // ─── RELEASE NOTES ────────────────────────────────────────────
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
 const RELEASES = [
+    { ver:'1.8', date:'Apr 10', items:[
+        'Fixed header showing "Round 100" — robust round detection from masters.com bitmask',
+        'Tee times and featured groups now update dynamically per round',
+        'All dates and round labels auto-advance through R1–R4',
+    ]},
     { ver:'1.7', date:'Apr 9', items:[
         'Fixed hole difficulty chart — bars now point correct direction',
         'Added mouseover tooltips to hole difficulty (par, avg, player count)',
