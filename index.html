@@ -1698,7 +1698,13 @@ async function fetchLeaderboard() {
         document.getElementById('hdr-round').textContent    = `R${round}`;
         document.getElementById('lb-round-tag').textContent = roundLabel;
 
-        const leader = players[0];
+        // Find actual tournament leader by lowest topar
+        const withScores = players.filter(p => p.topar != null && p.topar !== '');
+        const leader = withScores.length ? withScores.reduce((best, p) => {
+            const bScore = scoreToNum(best.topar);
+            const pScore = scoreToNum(p.topar);
+            return pScore < bScore ? p : best;
+        }, withScores[0]) : players[0];
         if (leader) {
             document.getElementById('hdr-leader').textContent = leader.display_name2 || leader.last_name || '—';
             document.getElementById('hdr-score').textContent  = fmtMastersScore(leader.topar);
