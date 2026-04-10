@@ -1175,6 +1175,11 @@ function applyLbView() {
             case 'time':  va = a.timeRaw;  vb = b.timeRaw;  break;
             default:      va = a.posNum;   vb = b.posNum;   break;
         }
+        // Push "no data" players to bottom regardless of sort direction
+        const aNull = (lbSortCol === 'today' && !a.today) || (lbSortCol === 'tot' && !a.tot);
+        const bNull = (lbSortCol === 'today' && !b.today) || (lbSortCol === 'tot' && !b.tot);
+        if (aNull && !bNull) return 1;
+        if (!aNull && bNull) return -1;
         if (va === vb) return 0;
         const cmp = typeof va === 'string' ? va.localeCompare(vb) : (va - vb);
         return lbSortDir === 'asc' ? cmp : -cmp;
