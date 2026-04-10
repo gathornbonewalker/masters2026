@@ -768,7 +768,7 @@
         <div class="hdr-stat"><span class="hdr-lbl">Purse</span><span class="hdr-val gold">$21,000,000</span></div>
         <div class="hdr-stat"><span class="hdr-lbl">Winner</span><span class="hdr-val gold">$3,600,000</span></div>
     </div>
-    <button id="version-btn" onclick="openRelease()" title="Click to see release notes — refresh page for updates">v1.9</button>
+    <button id="version-btn" onclick="openRelease()" title="Click to see release notes — refresh page for updates">v1.10</button>
     <button id="notice-btn" onclick="openNotice()">Notice</button>
     <div class="hdr-countdown">
         <span class="hdr-lbl">Round 1 Tee-off</span>
@@ -2348,8 +2348,12 @@ function openNotice()  { document.getElementById('notice-modal').classList.add('
 function closeNotice() { document.getElementById('notice-modal').classList.remove('open'); }
 
 // ─── RELEASE NOTES ────────────────────────────────────────────
-const APP_VERSION = '1.9';
+const APP_VERSION = '1.10';
 const RELEASES = [
+    { ver:'1.10', date:'Apr 10', items:[
+        'Fixed header leader not updating — now finds actual leader by lowest score',
+        'Fixed leaderboard RND column sort — no-score players sort to bottom',
+    ]},
     { ver:'1.9', date:'Apr 10', items:[
         'Fixed leaderboard RND column sort — no-score players now sort to bottom',
     ]},
