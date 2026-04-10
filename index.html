@@ -812,7 +812,7 @@
 <div id="timeline">
     <div class="tl-header">
         <div class="dot green"></div>
-        <span class="tl-label">Tee Times — Round 1 · Thursday April 9, 2026 · EDT</span>
+        <span class="tl-label" id="tl-round-label">Tee Times — Loading · EDT</span>
         <span class="tl-label" style="margin-left:auto">★ Featured</span>
     </div>
     <div class="tl-track" id="tl-track"><div class="loading-msg" style="padding:8px 14px">LOADING TEE TIMES...</div></div>
@@ -934,7 +934,7 @@
 
         <!-- Featured Groups -->
         <div class="section">
-            <div class="sec-hdr"><div class="col-hdr-accent"></div><span class="sec-title">Featured Groups · R1</span><span class="sec-tag">THU APR 9</span></div>
+            <div class="sec-hdr"><div class="col-hdr-accent"></div><span class="sec-title" id="fg-title">Featured Groups</span><span class="sec-tag" id="fg-date"></span></div>
             <div id="fg-list"><div class="loading-msg">LOADING...</div></div>
         </div>
 
@@ -1000,6 +1000,16 @@ const ROUND1_START = new Date('2026-04-09T07:40:00-04:00'); // first tee shot
 const LIVE_VIDEO_URL = 'https://www.masters.com/en_US/cms/feeds/live/liveVideo.json';
 const PAIRINGS_URL   = 'https://www.masters.com/en_US/scores/feeds/2026/pairings.json';
 const SCORES_URL     = 'https://www.masters.com/en_US/scores/feeds/2026/scores.json';
+
+// Derive round from statusRound (most reliable) — find last round that is P or F
+// statusRound is like "FPNN" = R1 finished, R2 in progress, R3/R4 not started
+function inferRound(sr) {
+    let r = 1;
+    for (let i = sr.length - 1; i >= 0; i--) {
+        if (sr[i] === 'P' || sr[i] === 'F') { r = i + 1; break; }
+    }
+    return r;
+}
 
 // Augusta hole data [par, yards]
 const HOLES = [
@@ -1512,13 +1522,34 @@ function switchChannel(channelId) {
     }
 }
 
+let currentPairingsRound = 1;
+const ROUND_DAYS = {
+    1: 'Thursday April 9, 2026',
+    2: 'Friday April 10, 2026',
+    3: 'Saturday April 11, 2026',
+    4: 'Sunday April 12, 2026'
+};
+
+const ROUND_SHORT_DAYS = { 1:'THU APR 9', 2:'FRI APR 10', 3:'SAT APR 11', 4:'SUN APR 12' };
+
+function updateTimelineLabel() {
+    const el = document.getElementById('tl-round-label');
+    if (el) el.textContent = `Tee Times — Round ${currentPairingsRound} · ${ROUND_DAYS[currentPairingsRound] || ''} · EDT`;
+    const fgTitle = document.getElementById('fg-title');
+    const fgDate  = document.getElementById('fg-date');
+    if (fgTitle) fgTitle.textContent = `Featured Groups · R${currentPairingsRound}`;
+    if (fgDate) fgDate.textContent = ROUND_SHORT_DAYS[currentPairingsRound] || '';
+}
+
 // ─── PAIRINGS / TEE TIMES ────────────────────────────────────
 async function fetchPairings() {
     try {
         const data = await (await fetch(PAIRINGS_URL)).json();
-        const round = data.currentRound || '1';
+        const round = parseInt(data.currentRound) || 1;
+        currentPairingsRound = round;
         const groups = data[`round${round}`]?.group || [];
         pairingsData = groups;
+        updateTimelineLabel();
         renderTimeline();
         renderFeaturedGroups();
         // If leaderboard is already showing empty state, upgrade it to field view
@@ -1529,6 +1560,7 @@ async function fetchPairings() {
     } catch(e) {
         // CORS fallback — use hardcoded key groups
         pairingsData = FALLBACK_GROUPS;
+        updateTimelineLabel();
         renderTimeline();
         renderFeaturedGroups();
         if (document.getElementById('lb-rows').querySelector('.lb-empty')) {
@@ -1643,11 +1675,10 @@ async function fetchLeaderboard() {
         const statusRound = d.statusRound || 'NNNN';
 
         // Pre-tournament: only if NO player has a score
-        if (!hasScores && (rawRound >= 1000 || statusRound === 'NNNN')) { showLbEmpty(); return; }
+        if (!hasScores && statusRound === 'NNNN') { showLbEmpty(); return; }
         if (!players.length) { showLbEmpty(); return; }
 
-        // If currentRound is 1000 but players have scores, infer round from statusRound
-        const round = rawRound >= 1000 ? Math.max(1, statusRound.search(/[PF]/)+1 || 1) : rawRound;
+        const round = (rawRound >= 1 && rawRound <= 4) ? rawRound : inferRound(statusRound);
 
         // Sort by sort_order (masters.com already provides this)
         players.sort((a,b) => {
@@ -1941,15 +1972,15 @@ function renderHoleDifficulty() {
     if (!el) return;
 
     const hasAnyScoresHD = scoresData?.player?.some(p => p.topar != null && p.topar !== '');
-    if (!scoresData || (parseInt(scoresData.currentRound) >= 1000 && !hasAnyScoresHD)) {
+    const statusRoundHD = scoresData?.statusRound || 'NNNN';
+    if (!scoresData || (statusRoundHD === 'NNNN' && !hasAnyScoresHD)) {
         el.innerHTML = '<div class="chart-placeholder">Available During Tournament</div>';
         if (tag) tag.textContent = 'AVG vs PAR';
         return;
     }
 
     const rawRoundHD = parseInt(scoresData.currentRound);
-    const statusRoundHD = scoresData.statusRound || 'NNNN';
-    const round   = rawRoundHD >= 1000 ? Math.max(1, Math.min(4, statusRoundHD.search(/[PF]/)+1 || 1)) : Math.min(Math.max(rawRoundHD || 1, 1), 4);
+    const round   = (rawRoundHD >= 1 && rawRoundHD <= 4) ? rawRoundHD : inferRound(statusRoundHD);
     const pars    = (scoresData.pars?.[`round${round}`]) || PARS;
     const players = scoresData.player || [];
 
@@ -2100,9 +2131,11 @@ function renderFavorites() {
         });
     }
 
-    const round = Math.min(Math.max(parseInt(scoresData?.currentRound) || 1, 1), 4);
+    const rawRoundFav = parseInt(scoresData?.currentRound);
+    const statusRoundFav = scoresData?.statusRound || 'NNNN';
+    const round = (rawRoundFav >= 1 && rawRoundFav <= 4) ? rawRoundFav : inferRound(statusRoundFav);
     const hasAnyScores = scoresData?.player?.some(p => p.topar != null && p.topar !== '');
-    const preEvent = !scoresData || (parseInt(scoresData.currentRound) >= 1000 && !hasAnyScores);
+    const preEvent = !scoresData || (statusRoundFav === 'NNNN' && !hasAnyScores);
 
     let html = '';
     favorites.forEach(pid => {
@@ -2181,11 +2214,11 @@ function showPlayerCard(pid) {
     toparEl.textContent  = topar;
     toparEl.className    = 'pm-topar ' + mastersScoreCls(p.topar);
     document.getElementById('pm-pos').textContent     = p.pos ? `Position: ${p.pos}` : '';
-    document.getElementById('pm-teetime').textContent = `R1 Tee: ${p.teetime||'—'}`;
+    document.getElementById('pm-teetime').textContent = `R${currentPairingsRound} Tee: ${p.teetime||'—'}`;
 
     // Scorecard
-    const round = parseInt(scoresData?.currentRound) || 1;
-    const activeRound = Math.min(Math.max(round >= 1000 ? 1 : round, 1), 4);
+    const rawRoundSC = parseInt(scoresData?.currentRound);
+    const activeRound = (rawRoundSC >= 1 && rawRoundSC <= 4) ? rawRoundSC : inferRound(scoresData?.statusRound || 'NNNN');
     buildScorecard(p, activeRound);
 
     // Links
@@ -2218,7 +2251,7 @@ function buildScorecard(p, activeRound) {
     const scTitle = document.getElementById('pm-sc-title');
     const scWrap  = document.getElementById('pm-scorecard');
     const hasAnyScores = scoresData?.player?.some(p => p.topar != null && p.topar !== '');
-    const preEvent = !scoresData || (parseInt(scoresData.currentRound) >= 1000 && !hasAnyScores);
+    const preEvent = !scoresData || ((scoresData.statusRound || 'NNNN') === 'NNNN' && !hasAnyScores);
 
     if (preEvent) {
         scTitle.textContent = 'ROUND 1 SCORECARD — Not yet started';
