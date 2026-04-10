@@ -1176,8 +1176,9 @@ function applyLbView() {
             default:      va = a.posNum;   vb = b.posNum;   break;
         }
         // Push "no data" players to bottom regardless of sort direction
-        const aNull = (lbSortCol === 'today' && !a.today) || (lbSortCol === 'tot' && !a.tot);
-        const bNull = (lbSortCol === 'today' && !b.today) || (lbSortCol === 'tot' && !b.tot);
+        const noScore = v => v === '—' || v === '' || v == null;
+        const aNull = (lbSortCol === 'today' && noScore(a.today)) || (lbSortCol === 'tot' && noScore(a.tot));
+        const bNull = (lbSortCol === 'today' && noScore(b.today)) || (lbSortCol === 'tot' && noScore(b.tot));
         if (aNull && !bNull) return 1;
         if (!aNull && bNull) return -1;
         if (va === vb) return 0;
