@@ -78,8 +78,10 @@
             font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; letter-spacing:2px;
             margin-right:14px; flex-shrink:0;
         }
-        .badge-upcoming { background:rgba(201,168,76,0.08); border:1px solid rgba(201,168,76,0.3); color:var(--gold); }
-        .badge-live     { background:rgba(217,79,79,0.1);   border:1px solid rgba(217,79,79,0.4);  color:var(--red); }
+        .badge-upcoming  { background:rgba(201,168,76,0.08); border:1px solid rgba(201,168,76,0.3); color:var(--gold); }
+        .badge-live      { background:rgba(217,79,79,0.1);   border:1px solid rgba(217,79,79,0.4);  color:var(--red); }
+        .badge-complete  { background:rgba(0,103,71,0.1);    border:1px solid rgba(0,103,71,0.4);   color:var(--green-bright); }
+        .badge-between   { background:rgba(201,168,76,0.06); border:1px solid rgba(201,168,76,0.25); color:var(--gold); }
         .badge-dot { width:6px; height:6px; border-radius:50%; }
         .badge-upcoming .badge-dot { background:var(--gold); }
         .badge-live .badge-dot { background:var(--red); animation:blink 1.4s infinite; }
@@ -771,7 +773,7 @@
     <button id="version-btn" onclick="openRelease()" title="Click to see release notes — refresh page for updates">v1.10</button>
     <button id="notice-btn" onclick="openNotice()">Notice</button>
     <div class="hdr-countdown">
-        <span class="hdr-lbl">Round 1 Tee-off</span>
+        <span class="hdr-lbl" id="hdr-countdown-lbl">Round 1 Tee-off</span>
         <span class="hdr-val gold" id="hdr-countdown">—</span>
     </div>
 </div>
@@ -1281,14 +1283,51 @@ function renderHoles() {
 function updateCountdown() {
     const ms = ROUND1_START - new Date();
     const str = fmtCountdown(ms);
-    document.getElementById('hdr-countdown').textContent = str;
-    document.getElementById('pre-cdown').textContent     = str;
     const sc = document.getElementById('slate-countdown');
-    if (sc) sc.textContent = ms > 0 ? str : '';
-    if (ms <= 0) {
-        const badge = document.getElementById('status-badge');
+    if (ms > 0) {
+        // Pre-tournament: counting down to R1
+        document.getElementById('hdr-countdown').textContent = str;
+        document.getElementById('pre-cdown').textContent     = str;
+        if (sc) sc.textContent = str;
+    }
+    // Once R1 has started, status is driven by updateTournamentStatus()
+}
+
+// Called from leaderboard fetch with live statusRound data
+// statusRound: "FPNN" = R1 finished, R2 in progress, etc.
+function updateTournamentStatus(statusRound, round) {
+    const badge      = document.getElementById('status-badge');
+    const cdVal      = document.getElementById('hdr-countdown');
+    const cdLbl      = document.getElementById('hdr-countdown-lbl');
+
+    if (!statusRound || statusRound === 'NNNN') return; // pre-tournament, leave countdown
+
+    const roundChar = statusRound[round - 1] || 'N';
+    const isLive    = roundChar === 'P';
+    const allDone   = statusRound === 'FFFF';
+    // Check if current round is between rounds (previous F, current N)
+    const betweenRounds = !isLive && round > 1 && statusRound[round - 2] === 'F' && roundChar === 'N';
+
+    if (allDone) {
+        badge.className = 'status-badge badge-complete';
+        badge.innerHTML = '<div class="badge-dot" style="background:var(--green-bright);animation:none"></div><span>FINAL</span>';
+        if (cdLbl) cdLbl.textContent = 'Tournament';
+        if (cdVal) cdVal.textContent = 'COMPLETE';
+    } else if (isLive) {
         badge.className = 'status-badge badge-live';
         badge.innerHTML = '<div class="badge-dot"></div><span>LIVE</span>';
+        if (cdLbl) cdLbl.textContent = `Round ${round}`;
+        if (cdVal) cdVal.textContent = 'IN PROGRESS';
+    } else if (betweenRounds) {
+        badge.className = 'status-badge badge-between';
+        badge.innerHTML = `<div class="badge-dot" style="background:var(--gold);animation:none"></div><span>R${round - 1} DONE</span>`;
+        if (cdLbl) cdLbl.textContent = `Round ${round} Tee-off`;
+        if (cdVal) cdVal.textContent = 'TOMORROW';
+    } else {
+        badge.className = 'status-badge badge-live';
+        badge.innerHTML = '<div class="badge-dot"></div><span>LIVE</span>';
+        if (cdLbl) cdLbl.textContent = `Round ${round}`;
+        if (cdVal) cdVal.textContent = 'IN PROGRESS';
     }
 }
 
@@ -1710,6 +1749,8 @@ async function fetchLeaderboard() {
             document.getElementById('hdr-score').textContent  = fmtMastersScore(leader.topar);
         }
 
+        updateTournamentStatus(statusRound, round);
+
         // Build tee time lookup from pairings
         const teeTimeLookup = {};
         for (const g of pairingsData) {
@@ -1875,6 +1916,12 @@ async function fetchLeaderboardESPN() {
             document.getElementById('hdr-leader').textContent = leader.name.split(' ').pop();
             document.getElementById('hdr-score').textContent  = leader.tot;
         }
+
+        // Update status badge from ESPN round status
+        const espnStatusMap = { 'STATUS_IN_PROGRESS': 'P', 'STATUS_FINAL': 'F', 'STATUS_SCHEDULED': 'N' };
+        const espnChar = espnStatusMap[roundStatus] || 'N';
+        const syntheticStatusRound = Array(4).fill('N').map((_, i) => i < round - 1 ? 'F' : i === round - 1 ? espnChar : 'N').join('');
+        updateTournamentStatus(syntheticStatusRound, round);
 
         applyLbView();
     } catch(e) { showLbEmpty(); }
