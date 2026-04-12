@@ -608,9 +608,9 @@
                 border-radius:4px 4px 0 0; border-bottom:none;
             }
 
-            /* ── Notice/Release modal full-screen ────────────── */
-            #notice-modal, #release-modal { align-items:flex-end; }
-            #notice-card, #release-card {
+            /* ── Notice/Release/Payout modal full-screen ─────── */
+            #notice-modal, #release-modal, #payout-modal { align-items:flex-end; }
+            #notice-card, #release-card, #payout-card {
                 width:100%; max-width:100%; max-height:88vh;
                 border-radius:4px 4px 0 0; border-bottom:none;
             }
@@ -678,6 +678,36 @@
             font-family:'JetBrains Mono',monospace; font-size:8px;
             color:var(--text-muted); letter-spacing:1px; text-align:center;
         }
+
+        /* ── PAYOUT MODAL ───────────────────────────── */
+        .hdr-stat-btn { cursor:pointer; border-radius:3px; transition:background 0.15s; }
+        .hdr-stat-btn:hover { background:rgba(201,168,76,0.1); }
+        #payout-modal {
+            display:none; position:fixed; inset:0; z-index:200;
+            background:rgba(0,0,0,0.82); backdrop-filter:blur(5px);
+            align-items:center; justify-content:center;
+        }
+        #payout-modal.open { display:flex; }
+        #payout-card {
+            background:var(--bg-panel); border:1px solid var(--border-gold);
+            border-radius:4px; width:480px; max-width:92vw; max-height:88vh;
+            overflow-y:auto; position:relative;
+            box-shadow:0 24px 64px rgba(0,0,0,0.85);
+        }
+        #payout-card::-webkit-scrollbar { width:3px; }
+        #payout-card::-webkit-scrollbar-thumb { background:var(--gold-dim); }
+        .payout-table { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:10px; }
+        .payout-table th { padding:6px 12px; text-align:left; font-size:7px; letter-spacing:2px; color:var(--text-muted); border-bottom:1px solid var(--border); }
+        .payout-table th:last-child { text-align:right; }
+        .payout-table td { padding:5px 12px; border-bottom:1px solid rgba(0,103,71,0.08); color:var(--text-dim); }
+        .payout-table td:last-child { text-align:right; color:var(--gold); }
+        .payout-table tr:hover td { background:rgba(201,168,76,0.04); }
+        .payout-table tr.payout-current td { background:rgba(0,103,71,0.12); }
+        .payout-table tr.payout-current td:first-child { color:var(--green-bright); font-weight:700; }
+        .payout-table tr.payout-current td.payout-name { color:var(--text); font-weight:600; }
+        .payout-table td.payout-pos { color:var(--text-muted); width:40px; }
+        .payout-table td.payout-score { width:50px; }
+        .payout-est { font-size:8px; color:var(--text-muted); letter-spacing:1px; }
 
         /* ── RELEASE NOTES ───────────────────────────── */
         #version-btn {
@@ -767,10 +797,10 @@
         <div class="hdr-stat"><span class="hdr-lbl">Temp</span><span class="hdr-val" id="hdr-temp">—</span></div>
         <div class="hdr-stat"><span class="hdr-lbl">Wind</span><span class="hdr-val" id="hdr-wind">—</span></div>
         <div class="hdr-stat"><span class="hdr-lbl">Field</span><span class="hdr-val">88 Players</span></div>
-        <div class="hdr-stat"><span class="hdr-lbl">Purse</span><span class="hdr-val gold">$21,000,000</span></div>
-        <div class="hdr-stat"><span class="hdr-lbl">Winner</span><span class="hdr-val gold">$3,600,000</span></div>
+        <div class="hdr-stat hdr-stat-btn" onclick="openPayouts()" title="Click to see estimated payouts"><span class="hdr-lbl">Purse</span><span class="hdr-val gold">$21,000,000</span></div>
+        <div class="hdr-stat hdr-stat-btn" onclick="openPayouts()" title="Click to see estimated payouts"><span class="hdr-lbl">Winner</span><span class="hdr-val gold">$3,600,000</span></div>
     </div>
-    <button id="version-btn" onclick="openRelease()" title="Click to see release notes — refresh page for updates">v1.11</button>
+    <button id="version-btn" onclick="openRelease()" title="Click to see release notes — refresh page for updates">v1.12</button>
     <button id="notice-btn" onclick="openNotice()">Notice</button>
     <div class="hdr-countdown">
         <span class="hdr-lbl" id="hdr-countdown-lbl">Round 1 Tee-off</span>
@@ -807,6 +837,24 @@
         </div>
         <div class="notice-body" id="release-body"></div>
         <div class="notice-footer">Refresh the page to get the latest version</div>
+    </div>
+</div>
+
+<!-- ═══ PAYOUT MODAL ══════════════════════════════════════════ -->
+<div id="payout-modal" onclick="if(event.target===this)closePayouts()">
+    <div id="payout-card">
+        <button class="notice-close" onclick="closePayouts()">✕</button>
+        <div class="notice-header">
+            <div class="notice-title">Estimated Payouts</div>
+            <div class="notice-subtitle">Based on current leaderboard position · $21,000,000 purse</div>
+        </div>
+        <div style="padding:12px 0 8px;">
+            <table class="payout-table">
+                <thead><tr><th>POS</th><th>PLAYER</th><th>SCORE</th><th>ESTIMATED</th></tr></thead>
+                <tbody id="payout-body"></tbody>
+            </table>
+        </div>
+        <div class="notice-footer"><span class="payout-est">Estimates based on current position — final payouts determined at tournament close</span></div>
     </div>
 </div>
 
@@ -2401,9 +2449,86 @@ function closePlayerCard() {
 function openNotice()  { document.getElementById('notice-modal').classList.add('open'); }
 function closeNotice() { document.getElementById('notice-modal').classList.remove('open'); }
 
+// ─── PAYOUT TABLE ─────────────────────────────────────────────
+const MASTERS_PAYOUTS = [
+    3600000,2160000,1360000,960000,800000,720000,670000,620000,
+    580000,540000,500000,460000,420000,385000,360000,335000,
+    315000,295000,275000,255000,240000,225000,210000,200000,
+    190000,180000,170000,162000,154000,148000,142000,136000,
+    130000,124000,119000,114000,109000,105000,101000,97000,
+    93500,90000,87000,84000,82000,80000,78500,77000,75500,74000
+];
+
+function fmtPayout(n) { return '$' + n.toLocaleString(); }
+
+function openPayouts() {
+    const tbody = document.getElementById('payout-body');
+    const players = lbPlayers.filter(p => p.posNum <= 9000);
+    const preEvent = !players.length;
+
+    let rows = '';
+    const payoutCount = Math.min(players.length || MASTERS_PAYOUTS.length, MASTERS_PAYOUTS.length);
+
+    if (preEvent) {
+        // No live data — show the full payout table with positions only
+        MASTERS_PAYOUTS.forEach((amt, i) => {
+            rows += `<tr><td class="payout-pos">${i+1}</td><td colspan="2" style="color:var(--text-muted)">—</td><td>${fmtPayout(amt)}</td></tr>`;
+        });
+    } else {
+        // Show players mapped to payouts by current position
+        // Sort by actual score, group by tied score for payout averaging
+        const sorted = [...players].sort((a,b) => a.totRaw - b.totRaw);
+        const posGroups = {};
+        sorted.forEach(p => {
+            const key = p.totRaw;
+            if (!posGroups[key]) posGroups[key] = [];
+            posGroups[key].push(p);
+        });
+
+        let slot = 0;
+        let playoffNote = false;
+        Object.keys(posGroups).sort((a,b)=>a-b).forEach(posKey => {
+            const group = posGroups[posKey];
+            const isTie = group.length > 1;
+            const isFirst = slot === 0;
+            // 1st place: Masters uses playoff, no split — each shows full winner payout with asterisk
+            // All other ties: average the prize money across tied slots
+            let payoutStr;
+            if (isFirst && isTie) {
+                payoutStr = fmtPayout(MASTERS_PAYOUTS[0]) + '*';
+                playoffNote = true;
+            } else {
+                const slots = group.map((_,i) => slot + i);
+                const avgPayout = slots.reduce((s,i) => s + (MASTERS_PAYOUTS[i] || 0), 0) / slots.length;
+                payoutStr = MASTERS_PAYOUTS[slot] !== undefined ? fmtPayout(Math.round(avgPayout)) : '—';
+            }
+            group.forEach(p => {
+                rows += `<tr class="${slot < 10 ? 'payout-current' : ''}">
+                    <td class="payout-pos">${p.pos}</td>
+                    <td class="payout-name">${p.name}</td>
+                    <td class="payout-score ${p.totCls}">${p.tot}</td>
+                    <td>${p.isCut ? '<span style="color:var(--text-muted)">CUT</span>' : payoutStr}</td>
+                </tr>`;
+            });
+            slot += group.length;
+        });
+        if (playoffNote) rows += `<tr><td colspan="4" style="padding:8px 12px;font-size:8px;color:var(--text-muted);letter-spacing:1px;">* Tied for 1st — The Masters uses sudden-death playoff; winner takes full purse</td></tr>`;
+    }
+
+    tbody.innerHTML = rows;
+    document.getElementById('payout-modal').classList.add('open');
+}
+
+function closePayouts() { document.getElementById('payout-modal').classList.remove('open'); }
+
 // ─── RELEASE NOTES ────────────────────────────────────────────
-const APP_VERSION = '1.11';
+const APP_VERSION = '1.12';
 const RELEASES = [
+    { ver:'1.12', date:'Apr 12', items:[
+        'Added estimated payout modal — click Purse or Winner in the header',
+        'Tied players share averaged prize money for positions 2+',
+        'First place ties show full purse with playoff note (Masters uses sudden-death)',
+    ]},
     { ver:'1.11', date:'Apr 12', items:[
         'Fixed LIVE badge — now shows R# COMPLETE when round is over, LIVE only during play',
         'Header countdown shows next round tee-off instead of stale Round 1 label',
@@ -2507,7 +2632,7 @@ function switchMobileTab(tab, btn) {
 
 // Close on Escape key
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closePlayerCard(); closeNotice(); closeRelease(); }
+    if (e.key === 'Escape') { closePlayerCard(); closeNotice(); closeRelease(); closePayouts(); }
 });
 
 // ─── LEADERBOARD RESIZE ───────────────────────────────────────
