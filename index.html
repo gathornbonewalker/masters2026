@@ -770,7 +770,7 @@
         <div class="hdr-stat"><span class="hdr-lbl">Purse</span><span class="hdr-val gold">$21,000,000</span></div>
         <div class="hdr-stat"><span class="hdr-lbl">Winner</span><span class="hdr-val gold">$3,600,000</span></div>
     </div>
-    <button id="version-btn" onclick="openRelease()" title="Click to see release notes — refresh page for updates">v1.10</button>
+    <button id="version-btn" onclick="openRelease()" title="Click to see release notes — refresh page for updates">v1.11</button>
     <button id="notice-btn" onclick="openNotice()">Notice</button>
     <div class="hdr-countdown">
         <span class="hdr-lbl" id="hdr-countdown-lbl">Round 1 Tee-off</span>
@@ -1302,11 +1302,12 @@ function updateTournamentStatus(statusRound, round) {
 
     if (!statusRound || statusRound === 'NNNN') return; // pre-tournament, leave countdown
 
-    const roundChar = statusRound[round - 1] || 'N';
-    const isLive    = roundChar === 'P';
-    const allDone   = statusRound === 'FFFF';
-    // Check if current round is between rounds (previous F, current N)
-    const betweenRounds = !isLive && round > 1 && statusRound[round - 2] === 'F' && roundChar === 'N';
+    const roundChar  = statusRound[round - 1] || 'N';
+    const nextChar   = round < 4 ? (statusRound[round] || 'N') : null;
+    const isLive     = roundChar === 'P';
+    const roundDone  = roundChar === 'F';
+    const allDone    = statusRound === 'FFFF';
+    const moreRounds = round < 4 && nextChar === 'N';
 
     if (allDone) {
         badge.className = 'status-badge badge-complete';
@@ -1318,16 +1319,18 @@ function updateTournamentStatus(statusRound, round) {
         badge.innerHTML = '<div class="badge-dot"></div><span>LIVE</span>';
         if (cdLbl) cdLbl.textContent = `Round ${round}`;
         if (cdVal) cdVal.textContent = 'IN PROGRESS';
-    } else if (betweenRounds) {
-        badge.className = 'status-badge badge-between';
-        badge.innerHTML = `<div class="badge-dot" style="background:var(--gold);animation:none"></div><span>R${round - 1} DONE</span>`;
-        if (cdLbl) cdLbl.textContent = `Round ${round} Tee-off`;
+    } else if (roundDone && moreRounds) {
+        // Current round finished, next round hasn't started
+        badge.className = 'status-badge badge-complete';
+        badge.innerHTML = `<div class="badge-dot" style="background:var(--green-bright);animation:none"></div><span>R${round} COMPLETE</span>`;
+        if (cdLbl) cdLbl.textContent = `Round ${round + 1} Tee-off`;
         if (cdVal) cdVal.textContent = 'TOMORROW';
     } else {
-        badge.className = 'status-badge badge-live';
-        badge.innerHTML = '<div class="badge-dot"></div><span>LIVE</span>';
+        // Fallback
+        badge.className = 'status-badge badge-between';
+        badge.innerHTML = `<div class="badge-dot" style="background:var(--gold);animation:none"></div><span>R${round}</span>`;
         if (cdLbl) cdLbl.textContent = `Round ${round}`;
-        if (cdVal) cdVal.textContent = 'IN PROGRESS';
+        if (cdVal) cdVal.textContent = '—';
     }
 }
 
@@ -2395,8 +2398,13 @@ function openNotice()  { document.getElementById('notice-modal').classList.add('
 function closeNotice() { document.getElementById('notice-modal').classList.remove('open'); }
 
 // ─── RELEASE NOTES ────────────────────────────────────────────
-const APP_VERSION = '1.10';
+const APP_VERSION = '1.11';
 const RELEASES = [
+    { ver:'1.11', date:'Apr 12', items:[
+        'Fixed LIVE badge — now shows R# COMPLETE when round is over, LIVE only during play',
+        'Header countdown shows next round tee-off instead of stale Round 1 label',
+        'Added FINAL state for when tournament ends',
+    ]},
     { ver:'1.10', date:'Apr 10', items:[
         'Fixed header leader not updating — now finds actual leader by lowest score',
         'Fixed leaderboard RND column sort — no-score players sort to bottom',
