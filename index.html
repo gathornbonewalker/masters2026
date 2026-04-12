@@ -1321,10 +1321,15 @@ function updateTournamentStatus(statusRound, round) {
         if (cdVal) cdVal.textContent = 'IN PROGRESS';
     } else if (roundDone && moreRounds) {
         // Current round finished, next round hasn't started
+        const ROUND_DATES = { 1:'2026-04-09', 2:'2026-04-10', 3:'2026-04-11', 4:'2026-04-12' };
+        const nextRound = round + 1;
+        const nextDate = ROUND_DATES[nextRound];
+        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone:'America/New_York' }); // YYYY-MM-DD in ET
+        const isToday = nextDate === todayStr;
         badge.className = 'status-badge badge-complete';
         badge.innerHTML = `<div class="badge-dot" style="background:var(--green-bright);animation:none"></div><span>R${round} COMPLETE</span>`;
-        if (cdLbl) cdLbl.textContent = `Round ${round + 1} Tee-off`;
-        if (cdVal) cdVal.textContent = 'TOMORROW';
+        if (cdLbl) cdLbl.textContent = `Round ${nextRound} Tee-off`;
+        if (cdVal) cdVal.textContent = isToday ? 'TODAY' : 'TOMORROW';
     } else {
         // Fallback
         badge.className = 'status-badge badge-between';
@@ -1719,14 +1724,13 @@ async function fetchLeaderboard() {
         const players = (d.player || []).filter(p => p.status !== 'X' && p.status !== 'WD');
         const hasScores = players.some(p => p.topar != null && p.topar !== '');
 
-        const rawRound = parseInt(d.currentRound);
         const statusRound = d.statusRound || 'NNNN';
 
         // Pre-tournament: only if NO player has a score
         if (!hasScores && statusRound === 'NNNN') { showLbEmpty(); return; }
         if (!players.length) { showLbEmpty(); return; }
 
-        const round = (rawRound >= 1 && rawRound <= 4) ? rawRound : inferRound(statusRound);
+        const round = inferRound(statusRound);
 
         // Sort by sort_order (masters.com already provides this)
         players.sort((a,b) => {
@@ -2042,7 +2046,7 @@ function renderHoleDifficulty() {
     }
 
     const rawRoundHD = parseInt(scoresData.currentRound);
-    const round   = (rawRoundHD >= 1 && rawRoundHD <= 4) ? rawRoundHD : inferRound(statusRoundHD);
+    const round   = inferRound(statusRoundHD);
     const pars    = (scoresData.pars?.[`round${round}`]) || PARS;
     const players = scoresData.player || [];
 
@@ -2195,7 +2199,7 @@ function renderFavorites() {
 
     const rawRoundFav = parseInt(scoresData?.currentRound);
     const statusRoundFav = scoresData?.statusRound || 'NNNN';
-    const round = (rawRoundFav >= 1 && rawRoundFav <= 4) ? rawRoundFav : inferRound(statusRoundFav);
+    const round = inferRound(statusRoundFav);
     const hasAnyScores = scoresData?.player?.some(p => p.topar != null && p.topar !== '');
     const preEvent = !scoresData || (statusRoundFav === 'NNNN' && !hasAnyScores);
 
@@ -2280,7 +2284,7 @@ function showPlayerCard(pid) {
 
     // Scorecard
     const rawRoundSC = parseInt(scoresData?.currentRound);
-    const activeRound = (rawRoundSC >= 1 && rawRoundSC <= 4) ? rawRoundSC : inferRound(scoresData?.statusRound || 'NNNN');
+    const activeRound = inferRound(scoresData?.statusRound || 'NNNN');
     buildScorecard(p, activeRound);
 
     // Links
