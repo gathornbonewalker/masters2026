@@ -679,6 +679,86 @@
             color:var(--text-muted); letter-spacing:1px; text-align:center;
         }
 
+        /* ── CHAMPION MODAL ─────────────────────────── */
+        #champion-modal {
+            display:none; position:fixed; inset:0; z-index:250;
+            background:rgba(0,0,0,0.88); backdrop-filter:blur(8px);
+            align-items:center; justify-content:center;
+        }
+        #champion-modal.open { display:flex; }
+        #champion-card {
+            background:linear-gradient(160deg,#071a0e 0%,#0b1f12 60%,#0f2416 100%);
+            border:1px solid rgba(201,168,76,0.5);
+            border-radius:6px; width:520px; max-width:92vw; max-height:92vh;
+            overflow-y:auto; position:relative;
+            box-shadow:0 0 80px rgba(201,168,76,0.15), 0 32px 80px rgba(0,0,0,0.9);
+        }
+        #champion-card::-webkit-scrollbar { width:3px; }
+        #champion-card::-webkit-scrollbar-thumb { background:var(--gold-dim); }
+        .champ-hero {
+            position:relative; text-align:center;
+            padding:28px 24px 20px;
+            background:linear-gradient(180deg,rgba(0,103,71,0.3) 0%,transparent 100%);
+            border-bottom:1px solid rgba(201,168,76,0.2);
+        }
+        .champ-photo {
+            width:130px; height:130px; border-radius:50%;
+            object-fit:cover; object-position:top;
+            border:3px solid var(--gold);
+            box-shadow:0 0 30px rgba(201,168,76,0.3);
+            margin-bottom:14px;
+        }
+        .champ-photo-fallback {
+            width:130px; height:130px; border-radius:50%;
+            background:rgba(0,103,71,0.3); border:3px solid var(--gold);
+            display:flex; align-items:center; justify-content:center;
+            font-size:48px; margin:0 auto 14px;
+        }
+        .champ-crown { font-size:28px; margin-bottom:6px; }
+        .champ-title {
+            font-family:'JetBrains Mono',monospace; font-size:8px;
+            letter-spacing:4px; color:var(--gold); text-transform:uppercase; margin-bottom:8px;
+        }
+        .champ-name {
+            font-family:'Playfair Display',serif; font-size:28px; font-weight:900;
+            color:#fff; margin-bottom:4px; line-height:1.1;
+        }
+        .champ-score {
+            font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700;
+            color:var(--green-bright); margin-bottom:2px;
+        }
+        .champ-purse {
+            font-family:'JetBrains Mono',monospace; font-size:13px;
+            color:var(--gold); letter-spacing:1px;
+        }
+        .champ-leaderboard { padding:16px 20px; }
+        .champ-lb-title {
+            font-family:'JetBrains Mono',monospace; font-size:7px;
+            letter-spacing:3px; color:var(--text-muted); margin-bottom:10px;
+        }
+        .champ-lb-row {
+            display:flex; align-items:center; gap:10px;
+            padding:6px 0; border-bottom:1px solid rgba(0,103,71,0.12);
+            font-family:'JetBrains Mono',monospace; font-size:10px;
+        }
+        .champ-lb-row:last-child { border-bottom:none; }
+        .champ-lb-pos { color:var(--text-muted); width:28px; flex-shrink:0; }
+        .champ-lb-name { color:var(--text); flex:1; }
+        .champ-lb-score { color:var(--green-bright); width:36px; text-align:right; flex-shrink:0; }
+        .champ-lb-prize { color:var(--gold); width:80px; text-align:right; flex-shrink:0; font-size:9px; }
+        .champ-close-btn {
+            display:block; width:calc(100% - 40px); margin:0 20px 20px;
+            font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:2px;
+            padding:10px; background:rgba(0,103,71,0.2); color:var(--green-bright);
+            border:1px solid var(--green); border-radius:3px; cursor:pointer;
+            transition:background 0.2s;
+        }
+        .champ-close-btn:hover { background:rgba(0,103,71,0.4); }
+        #confetti-canvas {
+            position:fixed; inset:0; z-index:300;
+            pointer-events:none; width:100%; height:100%;
+        }
+
         /* ── HOLE DIFFICULTY MODAL ──────────────────── */
         #holediff-modal {
             display:none; position:fixed; inset:0; z-index:200;
@@ -834,7 +914,7 @@
         <div class="hdr-stat hdr-stat-btn" onclick="openPayouts()" title="Click to see estimated payouts"><span class="hdr-lbl">Purse</span><span class="hdr-val gold">$21,000,000</span></div>
         <div class="hdr-stat hdr-stat-btn" onclick="openPayouts()" title="Click to see estimated payouts"><span class="hdr-lbl">Winner</span><span class="hdr-val gold">$3,600,000</span></div>
     </div>
-    <button id="version-btn" onclick="openRelease()" title="Click to see release notes — refresh page for updates">v1.13</button>
+    <button id="version-btn" onclick="openRelease()" title="Click to see release notes — refresh page for updates">v1.14</button>
     <button id="notice-btn" onclick="openNotice()">Notice</button>
     <div class="hdr-countdown">
         <span class="hdr-lbl" id="hdr-countdown-lbl">Round 1 Tee-off</span>
@@ -871,6 +951,29 @@
         </div>
         <div class="notice-body" id="release-body"></div>
         <div class="notice-footer">Refresh the page to get the latest version</div>
+    </div>
+</div>
+
+<!-- ═══ CONFETTI CANVAS ═══════════════════════════════════════ -->
+<canvas id="confetti-canvas" style="display:none;"></canvas>
+
+<!-- ═══ CHAMPION MODAL ═══════════════════════════════════════ -->
+<div id="champion-modal" onclick="if(event.target===this)closeChampion()">
+    <div id="champion-card">
+        <button class="notice-close" onclick="closeChampion()" style="color:var(--gold-light);">✕</button>
+        <div class="champ-hero">
+            <div class="champ-crown">🏆</div>
+            <div class="champ-title">Masters Champion · Augusta National · 2026</div>
+            <div id="champ-photo-wrap"></div>
+            <div class="champ-name" id="champ-name">—</div>
+            <div class="champ-score" id="champ-score">—</div>
+            <div class="champ-purse" id="champ-purse">—</div>
+        </div>
+        <div class="champ-leaderboard">
+            <div class="champ-lb-title">FINAL LEADERBOARD</div>
+            <div id="champ-lb-rows"></div>
+        </div>
+        <button class="champ-close-btn" onclick="closeChampion()">CLOSE · SEE FULL LEADERBOARD</button>
     </div>
 </div>
 
@@ -1925,6 +2028,7 @@ async function fetchLeaderboard() {
 
         applyLbView();
         renderHoleDifficulty();
+        checkChampionCelebration();
 
     } catch(e) {
         // Fall back to ESPN if masters.com scores blocked
@@ -2031,6 +2135,7 @@ async function fetchLeaderboardESPN() {
         updateTournamentStatus(syntheticStatusRound, round);
 
         applyLbView();
+        checkChampionCelebration();
     } catch(e) { showLbEmpty(); }
 }
 function showLbEmpty() {
@@ -2778,9 +2883,178 @@ function openHoleDiffModal() {
 
 function closeHoleDiff() { document.getElementById('holediff-modal').classList.remove('open'); }
 
+// ─── CONFETTI ─────────────────────────────────────────────────
+function launchConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    canvas.style.display = 'block';
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+
+    const COLORS = [
+        '#c9a84c','#e8c97a','#006747','#4ade80','#ffffff',
+        '#00875f','#f0d080','#a8d8b0','#d4a820','#80c880'
+    ];
+    const SHAPES = ['rect','circle','rect','rect']; // bias toward rect
+
+    const particles = Array.from({length:220}, () => ({
+        x: Math.random() * canvas.width,
+        y: -20 - Math.random() * 200,
+        vx: (Math.random() - 0.5) * 3.5,
+        vy: 2 + Math.random() * 4,
+        rot: Math.random() * Math.PI * 2,
+        rotV: (Math.random() - 0.5) * 0.18,
+        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        shape: SHAPES[Math.floor(Math.random() * SHAPES.length)],
+        w: 6 + Math.random() * 8,
+        h: 3 + Math.random() * 5,
+        alpha: 1,
+        decay: 0.004 + Math.random() * 0.006,
+    }));
+
+    let frame;
+    const tick = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let alive = false;
+        particles.forEach(p => {
+            p.x += p.vx; p.y += p.vy;
+            p.vy += 0.07; // gravity
+            p.vx *= 0.995;
+            p.rot += p.rotV;
+            p.alpha = Math.max(0, p.alpha - p.decay);
+            if (p.alpha <= 0) return;
+            alive = true;
+            ctx.save();
+            ctx.globalAlpha = p.alpha;
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.fillStyle = p.color;
+            if (p.shape === 'circle') {
+                ctx.beginPath();
+                ctx.arc(0, 0, p.w/2, 0, Math.PI*2);
+                ctx.fill();
+            } else {
+                ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+            }
+            ctx.restore();
+        });
+        if (alive) { frame = requestAnimationFrame(tick); }
+        else { canvas.style.display = 'none'; cancelAnimationFrame(frame); }
+    };
+    frame = requestAnimationFrame(tick);
+    // Stop spawning after 5s regardless
+    setTimeout(() => { particles.forEach(p => p.decay = Math.max(p.decay, 0.02)); }, 5000);
+}
+
+// ─── CHAMPION MODAL ───────────────────────────────────────────
+function buildChampionModal() {
+    // Prefer scoresData (masters.com) for accurate final scores; fall back to lbPlayers
+    let sorted;
+    const sdPlayers = (scoresData?.player || []).filter(p =>
+        p.status !== 'X' && p.status !== 'WD' && p.topar != null && p.topar !== ''
+    );
+    if (sdPlayers.length) {
+        sdPlayers.sort((a,b) => (scoreToNum(a.topar)||0) - (scoreToNum(b.topar)||0));
+        sorted = sdPlayers.map(p => ({
+            id: p.id,
+            name: p.full_name || p.display_name2 || '—',
+            tot: fmtMastersScore(p.topar),
+            totRaw: scoreToNum(p.topar),
+            totCls: mastersScoreCls(p.topar),
+            pos: p.pos || '—',
+        }));
+    } else {
+        sorted = [...lbPlayers].filter(p => p.tot && p.tot !== '—')
+            .sort((a,b) => a.totRaw - b.totRaw);
+    }
+    if (!sorted.length) return;
+
+    const winner = sorted[0];
+
+    // Winner photo: scoresData.player[].image is a boolean flag;
+    // construct URL from player id using masters.com CDN pattern
+    const winnerData = scoresData?.player?.find(p => p.id === winner.id
+        || (p.full_name || '').toLowerCase() === winner.name.toLowerCase());
+    const photoWrap = document.getElementById('champ-photo-wrap');
+    if (winnerData?.id && winnerData?.image) {
+        const img = document.createElement('img');
+        img.className = 'champ-photo';
+        img.src = `https://www.masters.com/assets/images/players/${winnerData.id}.jpg`;
+        img.onerror = () => {
+            // Try alternate path, then fall back to emoji
+            img.onerror = () => { photoWrap.innerHTML = `<div class="champ-photo-fallback">🏌️</div>`; };
+            img.src = `https://www.masters.com/assets/images/players/headshots/${winnerData.id}.jpg`;
+        };
+        photoWrap.innerHTML = '';
+        photoWrap.appendChild(img);
+    } else {
+        photoWrap.innerHTML = `<div class="champ-photo-fallback">🏌️</div>`;
+    }
+
+    document.getElementById('champ-name').textContent = winner.name;
+    document.getElementById('champ-score').textContent = winner.tot;
+    document.getElementById('champ-purse').textContent = `$3,600,000 · Winner's Share`;
+
+    // Top finishers
+    let slot = 0, rows = '';
+    const posGroups = {};
+    sorted.forEach(p => {
+        const key = p.totRaw;
+        if (!posGroups[key]) posGroups[key] = [];
+        posGroups[key].push(p);
+    });
+    Object.keys(posGroups).sort((a,b)=>Number(a)-Number(b)).slice(0,15).forEach(key => {
+        const group = posGroups[key];
+        const isTie = group.length > 1;
+        const isFirst = slot === 0;
+        const slots = group.map((_,i) => slot+i);
+        let prizeStr;
+        if (isFirst && isTie) {
+            prizeStr = fmtPayout(MASTERS_PAYOUTS[0]) + '*';
+        } else {
+            const avg = slots.reduce((s,i) => s + (MASTERS_PAYOUTS[i]||0),0) / slots.length;
+            prizeStr = MASTERS_PAYOUTS[slot] !== undefined ? fmtPayout(Math.round(avg)) : '—';
+        }
+        group.forEach(p => {
+            rows += `<div class="champ-lb-row">
+                <span class="champ-lb-pos">${isTie?'T':''}${slot+1}</span>
+                <span class="champ-lb-name">${p.name}</span>
+                <span class="champ-lb-score ${p.totCls}">${p.tot}</span>
+                <span class="champ-lb-prize">${prizeStr}</span>
+            </div>`;
+        });
+        slot += group.length;
+    });
+    document.getElementById('champ-lb-rows').innerHTML = rows;
+}
+
+function openChampion() {
+    buildChampionModal();
+    document.getElementById('champion-modal').classList.add('open');
+    launchConfetti();
+}
+
+function closeChampion() {
+    document.getElementById('champion-modal').classList.remove('open');
+    localStorage.setItem('masters_2026_champion_shown', '1');
+}
+
+function checkChampionCelebration() {
+    if (localStorage.getItem('masters_2026_champion_shown')) return;
+    if (scoresData?.statusRound === 'FFFF' && lbPlayers.length) {
+        openChampion();
+    }
+}
+
 // ─── RELEASE NOTES ────────────────────────────────────────────
-const APP_VERSION = '1.13';
+const APP_VERSION = '1.14';
 const RELEASES = [
+    { ver:'1.14', date:'Apr 12', items:[
+        'Champion celebration — confetti animation fires when tournament ends',
+        'Winner modal shows McIlroy\'s photo, trophy, name, final score, and purse',
+        'Top finishers listed with positions and estimated prize money',
+        'Modal auto-shows once on page load after FFFF status detected',
+    ]},
     { ver:'1.13', date:'Apr 12', items:[
         'Hole Difficulty chart now clickable — opens all-rounds breakdown modal',
         'Per-round bar charts (R1–R4) with COMPLETE/IN PROGRESS status',
